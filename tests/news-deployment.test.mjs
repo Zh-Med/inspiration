@@ -47,7 +47,7 @@ test('static export copies only public assets and records; works under a reposit
   let requested;const listeners={};const context={window:{InspirationRuntime:{contentMode:'static'},addEventListener(){}},document:{baseURI:'https://user.github.io/Inspiration/',addEventListener(n,f){listeners[n]=f},dispatchEvent(){}},localStorage:{getItem(){return null},setItem(){}},URL,AbortSignal,CustomEvent:class{},fetch:async url=>{requested=String(url);return {ok:true,json:async()=>payload}}};
   vm.runInNewContext(await readFile('app/content.js','utf8'),context);await context.window.Content.refresh();assert.equal(requested,'https://user.github.io/Inspiration/data/content.json');
   await context.window.Content.ensure('news/2026-11-12');assert.equal(requested,'https://user.github.io/Inspiration/data/digests/2026-11-12.json');
-  const sw=await readFile(join(out,'sw.js'),'utf8');assert.ok(sw.includes("relative.startsWith('data/')"));assert.ok(!sw.includes("PREFIX+'v49'"));
+  const sw=await readFile(join(out,'sw.js'),'utf8');assert.ok(sw.includes("relative.startsWith('data/')"));assert.ok(!/PREFIX\+'v\d+'/.test(sw));
   for(const asset of assets)assert.ok(files.includes(asset));
  }finally{await rm(temp,{recursive:true,force:true})}
 });

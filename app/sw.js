@@ -1,5 +1,5 @@
 const PREFIX='inspiration-shell-'+encodeURIComponent(new URL(self.registration.scope).pathname)+'-';
-const SHELL=PREFIX+'v49';
+const SHELL=PREFIX+'v52';
 const FILES=['./','index.html','style.css','app.js','provider-settings.js','content.js','runtime-config.js','news-dates.js','calendar.js','collection-motion.js','scene.js','manifest.webmanifest','icon.svg','icon-192.png','icon-512.png'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(SHELL).then(cache=>cache.addAll(FILES))));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith(PREFIX)&&k!==SHELL).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));

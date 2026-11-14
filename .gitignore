@@ -33,6 +33,7 @@
 !/docs/DEPLOYMENT.md
 !/docs/BACKEND.md
 !/docs/NEWS-COVERAGE.md
+!/docs/PERFORMANCE.md
 /.github/*
 !/.github/workflows/
 /.github/workflows/*

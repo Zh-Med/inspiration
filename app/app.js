@@ -76,7 +76,8 @@ function paintDeck(){
  stage.classList.toggle('is-moving',!!deckDrag?.moved||!!deckFrame);
  stage.querySelectorAll('.paper').forEach((el,i)=>{
   const q=i-deckProgress,depth=Math.max(-1.8,q),hidden=q<-.85||q>7.5;
-  el.style.visibility=hidden?'hidden':'visible';el.inert=hidden;el.setAttribute('aria-hidden',String(hidden));
+  if(el.getAttribute('aria-hidden')!==String(hidden)){el.style.visibility=hidden?'hidden':'visible';el.inert=hidden;el.setAttribute('aria-hidden',String(hidden))}
+  el.classList.toggle('is-front',!hidden&&i===nearest);
   if(hidden)return;
   const effect=bookshelfEffect(depth*w*.19,w);
   const x=w*(-.78+depth*.19+trailingShift),y=depth*13;

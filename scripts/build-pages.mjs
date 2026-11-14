@@ -22,7 +22,7 @@ export async function buildPages({dir=dataDir,out=resolve('dist')}={}){
  for(const t of view.tools)await json('items/'+t.id,publicTool(t));
  // Shell version follows source bytes; news-only changes do not reinstall the PWA.
  const hash=createHash('sha256');for(const name of assets)hash.update(await readFile(join(root,name)));
- const sw=await readFile(join(root,'sw.js'),'utf8');await writeFile(join(root,'sw.js'),sw.replace("PREFIX+'v49'",`PREFIX+'${hash.digest('hex').slice(0,16)}'`));
+ const sw=await readFile(join(root,'sw.js'),'utf8');await writeFile(join(root,'sw.js'),sw.replace(/PREFIX\+'v\d+'/,`PREFIX+'${hash.digest('hex').slice(0,16)}'`));
  await writeFile(join(root,'.nojekyll'),'');
  const report={builtAt:new Date().toISOString(),contentUpdatedAt:state.updatedAt,stories:view.stories.length,tools:view.tools.length,issues:Object.keys(view.digests).length,status:view.status,llmConfigured:false};
  await writeFile(join(root,'build-info.json'),JSON.stringify(report,null,2)+'\n');return report;
