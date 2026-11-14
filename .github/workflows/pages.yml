@@ -1,0 +1,95 @@
+name: Collect and publish Inspiration
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  schedule:
+    # UTC: hourly refresh; 00:07 is 08:07 Asia/Shanghai, avoiding the busy hour boundary.
+    - cron: '17 * * * *'
+    - cron: '7 0 * * *'
+permissions:
+  contents: read
+concurrency:
+  group: inspiration-publication
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - run: npm run check && npm test
+      - name: Restore public collector history
+        shell: bash
+        run: |
+          mkdir -p data
+          git ls-remote --heads origin content-state > /tmp/content-state-ref
+          if [ -s /tmp/content-state-ref ]; then
+            git fetch --no-tags origin content-state
+            git show FETCH_HEAD:state.json > data/state.json
+            git update-ref refs/remotes/origin/content-state FETCH_HEAD
+          fi
+      - name: Collect public news (no LLM)
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          SCHEDULE: ${{ github.event.schedule }}
+        shell: bash
+        run: |
+          set +e
+          if [ "$EVENT" = schedule ] && [ "$SCHEDULE" = '17 * * * *' ]; then
+            node scripts/collect.mjs --news-only
+          else
+            node scripts/collect.mjs
+          fi
+          result=$?
+          set -e
+          if [ "$result" -eq 2 ]; then
+            echo '::warning::Some sources failed. Published health records identify the degradation.'
+          elif [ "$result" -ne 0 ]; then
+            exit "$result"
+          fi
+      - run: npm run build
+      - name: Persist public history on a separate branch
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          blob=$(git hash-object -w data/state.json)
+          tree=$(printf '100644 blob %s\tstate.json\n' "$blob" | git mktree)
+          if git rev-parse --verify refs/remotes/origin/content-state >/dev/null 2>&1; then
+            commit=$(git commit-tree "$tree" -p refs/remotes/origin/content-state -m 'Update public news history')
+          else
+            commit=$(git commit-tree "$tree" -m 'Initialize public news history')
+          fi
+          git push origin "$commit:refs/heads/content-state"
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: dist
+      - name: Write run summary
+        run: |
+          echo '### Published build candidate' >> "$GITHUB_STEP_SUMMARY"
+          cat dist/build-info.json >> "$GITHUB_STEP_SUMMARY"
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/configure-pages@v5
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4
