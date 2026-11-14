@@ -1,4 +1,6 @@
 const icons={settings:'<path d="M4 6h16M4 12h16M4 18h16"/>',today:'<rect x="4" y="3" width="16" height="18" rx="3"/><path d="M8 8h8M8 12h8M8 16h4"/>',tools:'<path d="M12 3v18M3 12h18M6 6l12 12M6 18L18 6"/>',bookmark:'<path d="M6 4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v17l-6-4-6 4Z"/>',arrow:'<path d="M5 12h14m-5-5 5 5-5 5"/>',back:'<path d="m14 5-7 7 7 7"/>',close:'<path d="m6 6 12 12M6 18 18 6"/>',search:'<circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/>',check:'<path d="m5 12 4 4L19 6"/>',external:'<path d="M14 3h7v7m0-7L10 14M10 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-5"/>',book:'<path d="M12 5v16M3 4c4-1 6 0 9 2 3-2 5-3 9-2v15c-4-1-6 0-9 2-3-2-5-3-9-2Z"/>',chart:'<path d="M4 3v17h17M8 15l4-5 4 2 5-7"/>',pen:'<path d="m4 16 12-12 4 4L8 20H4Zm9-9 4 4"/>'};
+document.addEventListener('load',e=>{const image=e.target;if(!image.classList?.contains('paper-raster'))return;image.decode().then(()=>{if(!image.isConnected||image.closest('.collection-transition'))return;const page=image.closest('.paper');image.style.opacity=page.querySelector('.paper-select').style.opacity||'1';page.hasRasterTexture=true;page.classList.add('has-raster');queueDeckPaint()}).catch(()=>{})},true);
+const breathTexture=new Image();breathTexture.src='paper-breath.webp';breathTexture.decode().then(()=>document.documentElement.classList.add('has-breath-texture')).catch(()=>{});
 const icon=n=>`<svg viewBox="0 0 24 24" aria-hidden="true">${icons[n]||icons.tools}</svg>`;
 // Live source records; the empty state never falls back to fictional news.
 const stories=[],tools=[];
@@ -58,7 +60,7 @@ function emptyNewsMessage(date){const issue=issueMetadata[date];if(contentStatus
 function today(){
  const dateLabel=shelfKind==='today'?`<time class="news-date-label" datetime="${shelfDate}" aria-label="News ${shelfDate}">${shelfDate.slice(5).replace('-','/')}</time>`:'';
  if(shelfKind==='today'&&!shelfContent.length)return `<section class="deck-page" aria-label="News ${shelfDate}">${dateLabel}<div class="news-empty"><h1>News</h1><time datetime="${shelfDate}">${shelfDate.replaceAll('-','/')}</time><p>${esc(emptyNewsMessage(shelfDate))}</p><button type="button" data-calendar-open>选择日期</button></div></section>`;
- return `<section class="deck-page" style="view-transition-name:shelf-${shelfKind}" aria-label="${collections.find(c=>c.id===shelfKind)?.name||'News'}">${dateLabel}<div class="deck-stage tunnel" tabindex="0" aria-label="拖动浏览书架，左右方向键切换，点选金色纸面阅读">${deckCards.map((t,i)=>`<article class="paper${t.blank?' is-empty':''}" data-card="${i}" style="${paperMaterial(i)};--wave-order:${i}"><div class="paper-material"></div><div class="paper-shade"></div><div class="paper-light"></div><div class="paper-reflection"></div><button class="paper-select" data-deck="${i}" aria-label="${t.blank?'空白纸页，没有内容':esc(t.title||t.name)}">${t.blank?'':`<span class="paper-spine">${esc(t.name||t.english)}</span>`}</button></article>`).join('')}</div></section>`
+ return `<section class="deck-page" style="view-transition-name:shelf-${shelfKind}" aria-label="${collections.find(c=>c.id===shelfKind)?.name||'News'}">${dateLabel}<div class="deck-stage tunnel" tabindex="0" aria-label="拖动浏览书架，左右方向键切换，点选金色纸面阅读">${deckCards.map((t,i)=>`<article class="paper${t.blank?' is-empty':''}" data-card="${i}" style="${paperMaterial(i)};--wave-order:${i}"><img class="paper-raster" src="${i<shelfContent.length?'paper-gold.webp':`paper-blank-${i-shelfContent.length+1}.webp`}" alt="" aria-hidden="true" decoding="async" draggable="false"><div class="paper-shadow"></div><div class="paper-face"><div class="paper-material"></div><div class="paper-shade"></div><div class="paper-light"></div><div class="paper-reflection"></div><div class="paper-breath"></div><div class="paper-edge"></div><button class="paper-select" data-deck="${i}" aria-label="${t.blank?'空白纸页，没有内容':esc(t.title||t.name)}">${t.blank?'':`<span class="paper-spine">${esc(t.name||t.english)}</span>`}</button></div></article>`).join('')}</div></section>`
 }
 // Web adaptation of REA's position response: user-requested gentler angles.
 // Spacing, lighting, translucency and damping are authored for this PWA.
@@ -66,46 +68,116 @@ function bookshelfEffect(minX,extent){
  const offset=Math.min(-minX*.8,-minX*1.4);
  return {scale:Math.max(.38,1+offset/(extent*4.4)),angle:offset/46};
 }
-function paintDeck(){
- const stage=$('.tunnel');if(!stage)return;
- const w=deckDrag?.stage===stage?deckDrag.width:stage.clientWidth;
+// Rebuilt only when the live shelf is replaced; snapshots never share this cache.
+let deckPaintCache=null;
+document.documentElement.classList.toggle('paper-blur-off',new URLSearchParams(location.search).get('paper-blur')==='off');
+function resetDeckPaintCache(){deckPaintCache?.observer?.disconnect();deckPaintCache=null}
+function getDeckPaintCache(){
+ if(deckPaintCache?.stage.isConnected)return deckPaintCache;
+ resetDeckPaintCache();const stage=$('.tunnel');if(!stage)return null;
+ const pages=[...stage.querySelectorAll('.paper')].map((el,i)=>{
+  el.style.zIndex=String(100-i);el.style.opacity='1';el.style.visibility='hidden';el.inert=true;el.setAttribute('aria-hidden','true');
+  const button=el.querySelector('[data-deck]');button.setAttribute('aria-pressed','false');
+  const layers={paper:el,select:button};for(const name of ['material','shade','light','reflection','breath','edge','shadow','raster'])layers[name]=el.querySelector('.paper-'+name);
+  return {el,button,layers,values:Object.create(null)};
+ });
+ const cache={stage,pages,width:stage.clientWidth,visible:new Set(),front:null,selected:null,observer:null,moving:false,lastMaterialTime:-Infinity,solid:matchMedia('(prefers-reduced-transparency: reduce)')};
+ if(typeof ResizeObserver!=='undefined'){
+  cache.observer=new ResizeObserver(()=>{if(deckPaintCache!==cache)return;const width=stage.clientWidth;if(width!==cache.width){cache.width=width;queueDeckPaint()}});
+  cache.observer.observe(stage);
+ }
+ return deckPaintCache=cache;
+}
+const DECK_MATERIAL_INTERVAL=1000/18;
+function setDeckLayer(page,layer,property,value){
+ const key=layer+'.'+property;
+ if(page.values[key]!==value){page.values[key]=value;page.layers[layer].style[property]=value}
+}
+// Lighting samples latest geometry at 18 Hz; no independent timer or animation loop.
+function paintDeckMaterials(cache,indices){
+ for(const i of indices){
+  const page=cache.pages[i],{q,effect}=page.pose;
+  if(i===cache.front){
+   const phase=q*.6+deckProgress*.42;
+   setDeckLayer(page,'light','transform',`translate(${((Math.sin(phase)*8+deckGlow*5)/1.36).toFixed(3)}%,${((deckPointerY*15+Math.cos(q*.5)*4-7)/1.36).toFixed(3)}%)`);
+   setDeckLayer(page,'reflection','transform',`translateX(${((Math.sin(phase)*6+deckGlow*5)/1.7).toFixed(3)}%) rotate(${(effect.angle*.45+deckGlow*4).toFixed(3)}deg)`);
+   page.lightGain=.22+.14*Math.exp(-Math.pow((q-1.8)/2.5,2));
+   page.shadeGain=.12+.08*Math.min(1,Math.abs(q-1.5)/4);
+  }
+  const boost=1+.5*(1-Math.min(Math.max(q,0),Math.max(1,shelfContent.length-1))/Math.max(1,shelfContent.length-1));
+  page.breathGain=.58*boost*2/3;
+ }
+}
+// Visibility fade belongs to motion: retain smooth entry/exit between light samples.
+function paintDeckFade(cache,i){
+ const page=cache.pages[i],fade=page.pose.fade;
+ const alpha=value=>value.toFixed(4);
+ const raster=page.el.hasRasterTexture&&!cache.solid.matches&&i!==cache.front;
+ if(raster)setDeckLayer(page,'raster','opacity',alpha(fade));
+ else{
+  setDeckLayer(page,'material','opacity',alpha((cache.solid.matches?1:.96)*fade));
+  for(const layer of ['edge','shadow'])setDeckLayer(page,layer,'opacity',alpha(fade));
+ }
+ setDeckLayer(page,'select','opacity',alpha(fade));
+ if(i===cache.front){
+  setDeckLayer(page,'light','opacity',alpha(page.lightGain*fade));
+  setDeckLayer(page,'reflection','opacity',alpha(.34*fade));
+  setDeckLayer(page,'shade','opacity',alpha(page.shadeGain*fade));
+ }
+ setDeckLayer(page,'breath','opacity',alpha(page.breathGain*fade));
+}
+function paintDeck(time=performance.now()){
+ const cache=getDeckPaintCache();if(!cache||!cache.pages.length)return;
+ const {stage,pages}=cache,w=cache.width;
  const nearest=Math.max(0,Math.min(deckCards.length-1,Math.round(deckProgress)));
  const speed=reduceMotion()?0:Math.max(-1,Math.min(1,deckVelocity*85));
  deckGlow+=(speed-deckGlow)*.24;
  const trailingShift=Math.max(0,3-(deckCards.length-1-deckProgress))*.18;
- stage.classList.toggle('is-moving',!!deckDrag?.moved||!!deckFrame);
- stage.querySelectorAll('.paper').forEach((el,i)=>{
-  const q=i-deckProgress,depth=Math.max(-1.8,q),hidden=q<-.85||q>7.5;
-  if(el.getAttribute('aria-hidden')!==String(hidden)){el.style.visibility=hidden?'hidden':'visible';el.inert=hidden;el.setAttribute('aria-hidden',String(hidden))}
-  el.classList.toggle('is-front',!hidden&&i===nearest);
-  if(hidden)return;
+ const moving=!!deckDrag?.moved||!!deckFrame||!!deckWheelTimer;
+ if(cache.moving!==moving){stage.classList.toggle('is-moving',moving);cache.moving=moving}
+ const first=Math.max(0,Math.ceil(deckProgress-.85)),last=Math.min(pages.length-1,Math.floor(deckProgress+7.5));
+ const visible=new Set();for(let i=first;i<=last;i++)visible.add(i);
+ for(const i of cache.visible){if(!visible.has(i)){const el=pages[i].el;el.style.visibility='hidden';el.inert=true;el.setAttribute('aria-hidden','true')}}
+ // Keep one real-blur surface stable while a finger jitters across the selection midpoint.
+ // Selection still follows the original nearest-page rule; only material ownership has hysteresis.
+ const foreground=moving&&cache.front!==null&&visible.has(cache.front)&&Math.abs(deckProgress-cache.front)<=.62?cache.front:nearest;
+ const foregroundChanged=cache.front!==foreground;
+ if(foregroundChanged){
+  if(cache.front!==null)pages[cache.front].el.classList.remove('is-front');
+  pages[foreground].el.classList.add('is-front');cache.front=foreground;
+ }
+ if(cache.selected!==nearest){
+  if(cache.selected!==null)pages[cache.selected].button.setAttribute('aria-pressed','false');
+  pages[nearest].button.setAttribute('aria-pressed','true');cache.selected=nearest;
+ }
+ const fresh=[];
+ for(const i of visible){
+  const page=pages[i],el=page.el,q=i-deckProgress,depth=Math.max(-1.8,q);
+  if(!cache.visible.has(i)){el.style.visibility='visible';el.inert=false;el.setAttribute('aria-hidden','false');fresh.push(i)}
   const effect=bookshelfEffect(depth*w*.19,w);
   const x=w*(-.78+depth*.19+trailingShift),y=depth*13;
-  el.style.transform=`translate3d(${x}px,${y}px,0) rotateZ(${effect.angle}deg) scale(${effect.scale})`;
-  el.style.zIndex=String(100-i);
+  setDeckLayer(page,'paper','transform',`translate3d(${x.toFixed(3)}px,${y.toFixed(3)}px,0) rotateZ(${effect.angle.toFixed(4)}deg) scale(${effect.scale.toFixed(5)})`);
   // Keep this backdrop ancestor opaque: crossing opacity 1 changes its backdrop root.
   const fade=Math.min(1,Math.max(0,1+(q+.4)/.45),Math.max(0,(7.5-q)/.75));
-  el.style.opacity='1';el.style.setProperty('--paper-fade',String(fade));
-  // A broad frontal light stays steady; motion only shifts its soft falloff.
-  const phase=q*.6+deckProgress*.42;
-  el.style.setProperty('--light-x',`${55+Math.sin(phase)*8+deckGlow*5}%`);
-  el.style.setProperty('--light-y',`${35+deckPointerY*15+Math.cos(q*.5)*4}%`);
-  el.style.setProperty('--light-power',String(.22+.14*Math.exp(-Math.pow((q-1.8)/2.5,2))));
-  el.style.setProperty('--sheen-angle',`${112+effect.angle*.45+deckGlow*4}deg`);
-  el.style.setProperty('--sheen-x',`${46+Math.sin(phase)*6+deckGlow*5}%`);
-  const breathBoost=1+.5*(1-Math.min(Math.max(q,0),Math.max(1,shelfContent.length-1))/Math.max(1,shelfContent.length-1));
-  el.style.setProperty('--breath-peak',String(.58*breathBoost*fade));
-  el.style.setProperty('--shade',String(.12+.08*Math.min(1,Math.abs(q-1.5)/4)));
-  el.querySelector('[data-deck]').setAttribute('aria-pressed',i===nearest);
- });
+  page.pose={q,effect,fade};
+ }
+ if(!moving||time-cache.lastMaterialTime>=DECK_MATERIAL_INTERVAL){
+  paintDeckMaterials(cache,visible);cache.lastMaterialTime=time;
+ }else{
+  // A newly exposed foreground must not inherit another page's stale lighting.
+  if(foregroundChanged&&!fresh.includes(foreground))fresh.push(foreground);
+  if(fresh.length)paintDeckMaterials(cache,fresh);
+ }
+ for(const i of visible)paintDeckFade(cache,i);
+ cache.visible=visible;
  if(deckIndex!==nearest||!stage.dataset.selection){
   deckIndex=nearest;stage.dataset.selection=String(nearest+1);
   const t=deckCards[nearest],label=t.blank?'空白纸页，没有内容':(t.title||t.name).replace('\n','');
   stage.setAttribute('aria-label',`书架，第 ${nearest+1} 项，共 ${deckCards.length} 项：${label}。左右方向键切换，点选金色纸面阅读`);
  }
 }
-function queueDeckPaint(){if(!deckPaintFrame)deckPaintFrame=requestAnimationFrame(()=>{deckPaintFrame=0;paintDeck()})}
-function stopDeck(){cancelAnimationFrame(deckFrame);cancelAnimationFrame(deckPaintFrame);clearTimeout(deckWheelTimer);deckWheelTimer=0;deckFrame=0;deckPaintFrame=0;deckVelocity=0;deckTarget=null;$('.tunnel')?.classList.remove('is-moving');}
+function queueDeckPaint(){if(!deckPaintFrame)deckPaintFrame=requestAnimationFrame(time=>{deckPaintFrame=0;paintDeck(time)})}
+function stopDeck(){cancelAnimationFrame(deckFrame);cancelAnimationFrame(deckPaintFrame);clearTimeout(deckWheelTimer);deckWheelTimer=0;deckFrame=0;deckPaintFrame=0;deckVelocity=0;deckTarget=null;if(deckPaintCache?.moving){deckPaintCache.stage.classList.remove('is-moving');deckPaintCache.moving=false;}}
 // Drag starts in the uncompressed coordinate so interrupting an edge spring is continuous.
 function dragCoordinate(position,max){return position<0?position/.18:position>max?max+(position-max)/.18:position}
 function rubberBand(position,max){return position<0?position*.18:position>max?max+(position-max)*.18:position}
@@ -125,14 +197,14 @@ function animateDeck(time){
   deckProgress=deckTarget+(displacement+c*dt)*decay;
   deckVelocity=(deckVelocity-c*dt/tau)*decay;
   if(Math.abs(deckProgress-deckTarget)<.001&&Math.abs(deckVelocity)<.00002){
-   deckProgress=deckTarget;deckVelocity=0;deckTarget=null;deckFrame=0;deckGlow=0;paintDeck();return;
+   deckProgress=deckTarget;deckVelocity=0;deckTarget=null;deckFrame=0;deckGlow=0;paintDeck(time);return;
   }
  }else{
   deckProgress+=deckVelocity*dt;deckVelocity*=Math.exp(-dt/270);
   if(deckProgress<0||deckProgress>deckCards.length-1)deckTarget=Math.max(0,Math.min(deckCards.length-1,deckProgress));
   else if(Math.abs(deckVelocity)<.0003)deckTarget=Math.round(deckProgress);
  }
- paintDeck();deckFrame=requestAnimationFrame(animateDeck);
+ paintDeck(time);deckFrame=requestAnimationFrame(animateDeck);
 }
 function turnDeck(index){stopDeck();const next=Math.max(0,Math.min(deckCards.length-1,index));if(reduceMotion()){deckProgress=next;paintDeck();return}deckTarget=next;deckLastTime=performance.now();deckFrame=requestAnimationFrame(animateDeck);}
 function list(kind){const saved=kind==='saved';return intro(saved?'留下值得再看的。':'把好工具，用在对的地方。',saved?'收藏你的线索，让下一次查找更轻松。':'从文献到写作，每次只改进一个步骤。')+`<label class="search">${icon('search')}<input type="search" id="search" aria-label="${saved?'搜索收藏':'搜索工作流'}" placeholder="${saved?'搜索已收藏内容':'搜索任务或工作流'}" value="${esc(query)}"></label><div class="filters" aria-label="筛选">${(saved?['全部','新闻','工具']:['全部','文献','分析','写作']).map(x=>`<button data-filter="${x}" aria-pressed="${filter===x}">${x}</button>`).join('')}</div><div id="results">${results(kind)}</div>`}
@@ -181,7 +253,7 @@ document.addEventListener('content-update',e=>{
  if(newsLaunch||deckDrag||deckFrame||deckWheelTimer||(location.hash!=='#collections'&&(shelfKindForRoute(location.hash.slice(1)||'today')?shelfContent.length:!!$('.article')))){pendingContent=data;return}
  applyContent(data);render(true);
 });
-function renderContent(restore=false){freezeDeck();if(pendingContent&&!deckDrag){applyContent(pendingContent);pendingContent=null}const route=location.hash.slice(1)||'today';Content.ensure(route);const parts=route.split('/');const kind=shelfKindForRoute(route),isShelf=!!kind;document.body.classList.toggle('deck-view',isShelf);document.body.classList.toggle('collections-view',route==='collections');document.body.classList.toggle('news-reading',['story','tool'].includes(parts[0]));if(isShelf){selectShelf(kind,NewsDates.route(route));returnRoute=route}const nav=$('#navigation-button');nav.hidden=route==='collections';nav.innerHTML=icon('back');nav.setAttribute('aria-label',isShelf?'返回收藏夹总览':'返回书架');nav.title=nav.getAttribute('aria-label');$('.brand').textContent='Inspiration';active=['today','tools','saved'].includes(parts[0])?parts[0]:active;$('#main').innerHTML=parts[0]==='news'&&!isShelf?intro('Invalid date','请选择一个有效日期。')+'<button type="button" data-calendar-open>选择日期</button>':parts[0]==='story'?detail(parts[1],false):parts[0]==='tool'?detail(parts[1],true):route==='collections'?collectionOverview():isShelf?today():list(active);$('#main').classList.remove('page-enter');void $('#main').offsetWidth;if(!document.body.classList.contains('collection-transition-active'))$('#main').classList.add('page-enter');if(isShelf)paintDeck();else stopDeck();if(!navigator.onLine&&!isShelf)$('#main').insertAdjacentHTML('afterbegin','<div class="offline" role="status">当前离线 · 正在阅读已缓存内容</div>');requestAnimationFrame(()=>{window.scrollTo(0,restore?positions[route]||0:0);if(parts.length>1)$('#main').focus({preventScroll:true})});}
+function renderContent(restore=false){freezeDeck();resetDeckPaintCache();if(pendingContent&&!deckDrag){applyContent(pendingContent);pendingContent=null}const route=location.hash.slice(1)||'today';Content.ensure(route);const parts=route.split('/');const kind=shelfKindForRoute(route),isShelf=!!kind;document.documentElement.classList.toggle('navigation-locked',isShelf||route==='collections');document.body.classList.toggle('deck-view',isShelf);document.body.classList.toggle('collections-view',route==='collections');document.body.classList.toggle('news-reading',['story','tool'].includes(parts[0]));if(isShelf){selectShelf(kind,NewsDates.route(route));returnRoute=route}const nav=$('#navigation-button');nav.hidden=route==='collections';nav.innerHTML=icon('back');nav.setAttribute('aria-label',isShelf?'返回收藏夹总览':'返回书架');nav.title=nav.getAttribute('aria-label');$('.brand').textContent='Inspiration';active=['today','tools','saved'].includes(parts[0])?parts[0]:active;$('#main').innerHTML=parts[0]==='news'&&!isShelf?intro('Invalid date','请选择一个有效日期。')+'<button type="button" data-calendar-open>选择日期</button>':parts[0]==='story'?detail(parts[1],false):parts[0]==='tool'?detail(parts[1],true):route==='collections'?collectionOverview():isShelf?today():list(active);$('#main').classList.remove('page-enter');void $('#main').offsetWidth;if(!document.body.classList.contains('collection-transition-active'))$('#main').classList.add('page-enter');if(isShelf)paintDeck();else stopDeck();if(!navigator.onLine&&!isShelf)$('#main').insertAdjacentHTML('afterbegin','<div class="offline" role="status">当前离线 · 正在阅读已缓存内容</div>');requestAnimationFrame(()=>{window.scrollTo(0,restore?positions[route]||0:0);if(parts.length>1)$('#main').focus({preventScroll:true})});}
 let renderedRoute=null,routeTransition=null,newsLaunch=null;
 function cancelNewsLaunch(){newsLaunch?.motion.finish()}
 function render(restore=false){
@@ -267,19 +339,20 @@ document.addEventListener('pointerdown',e=>{
  deckDrag={id:e.pointerId,x:e.clientX,y:e.clientY,start:dragCoordinate(deckProgress,deckCards.length-1),last:e.clientX,time:performance.now(),moved:false,stage,width:stage.clientWidth,rect,span:Math.max(70,stage.clientWidth*.24)};
 });
 document.addEventListener('pointermove',e=>{
- const d=deckDrag;if(!d||d.id!==e.pointerId)return;
+ const d=deckDrag;if(!d||d.id!==e.pointerId||d.vertical)return;
  const dx=e.clientX-d.x,dy=e.clientY-d.y;
- if(!d.moved){if(Math.abs(dy)>12&&Math.abs(dy)>Math.abs(dx)){deckDrag=null;return}if(Math.abs(dx)<5)return;d.moved=true;d.stage.setPointerCapture(e.pointerId)}
+ if(!d.moved){if(Math.abs(dy)>12&&Math.abs(dy)>Math.abs(dx)){d.vertical=true;return}if(Math.abs(dx)<5)return;d.moved=true;d.stage.setPointerCapture(e.pointerId)}
  const now=performance.now(),dt=Math.max(1,now-d.time),raw=d.start-dx/d.span;
- const next=rubberBand(raw,deckCards.length-1);
+ const next=rubberBand(raw,deckCards.length-1),positionChanged=Math.abs(next-deckProgress)>.00001;
  const blend=1-Math.exp(-dt/40);
  deckVelocity+=( (next-deckProgress)/dt-deckVelocity)*blend;
  deckProgress=next;deckPointerY=Math.max(0,Math.min(1,(e.clientY-d.rect.top)/d.rect.height));
- d.last=e.clientX;d.time=now;queueDeckPaint();
+ d.last=e.clientX;d.time=now;if(positionChanged)queueDeckPaint();
 });
 function releaseDeck(e,cancelled=false){
  const d=deckDrag;if(!d||d.id!==e.pointerId)return;
  deckDrag=null;if(d.stage.hasPointerCapture(e.pointerId))d.stage.releasePointerCapture(e.pointerId);
+ if(d.vertical){suppressUntil=performance.now()+350;return}
  if(!d.moved)return;
  suppressUntil=performance.now()+350;cancelAnimationFrame(deckPaintFrame);deckPaintFrame=0;
  if(cancelled||performance.now()-d.time>90)deckVelocity=0;
@@ -295,11 +368,30 @@ document.addEventListener('pointerup',e=>releaseDeck(e));document.addEventListen
 document.addEventListener('lostpointercapture',e=>{if(deckDrag?.moved&&deckDrag.id===e.pointerId&&!deckDrag.stage.hasPointerCapture(e.pointerId))releaseDeck(e,true)});
 window.addEventListener('blur',()=>{freezeDeck();paintDeck()});
 document.addEventListener('news-calendar-open',()=>{cancelDeckGesture();stopDeck();paintDeck()});
-document.addEventListener('click',e=>{if(performance.now()<suppressUntil&&e.target.closest('.tunnel')){e.preventDefault();e.stopImmediatePropagation()}},true);
+document.addEventListener('click',e=>{if(performance.now()<suppressUntil&&e.target.closest('.tunnel,.collection-card')){e.preventDefault();e.stopImmediatePropagation()}},true);
 document.addEventListener('keydown',e=>{if(!e.target.closest('.tunnel')||!['ArrowLeft','ArrowRight'].includes(e.key))return;e.preventDefault();turnDeck(Math.round(deckProgress)+(e.key==='ArrowRight'?1:-1));});
-window.addEventListener('resize',()=>{if(deckDrag&&Math.abs(deckDrag.stage.clientWidth-deckDrag.width)>1)cancelDeckGesture();paintDeck()});
+window.addEventListener('resize',()=>{if(deckPaintCache)deckPaintCache.width=deckPaintCache.stage.clientWidth;if(deckDrag&&Math.abs(deckDrag.stage.clientWidth-deckDrag.width)>1)cancelDeckGesture();paintDeck()});
 $('.skip').addEventListener('click',e=>{e.preventDefault();$('#main').focus({preventScroll:true});$('#main').scrollIntoView({behavior:'auto',block:'start'})});
-document.addEventListener('wheel',e=>{const stage=e.target.closest('.tunnel');if(!stage||(!e.shiftKey&&Math.abs(e.deltaX)<=Math.abs(e.deltaY)))return;e.preventDefault();if(deckDrag)return;stopDeck();clearTimeout(deckWheelTimer);const delta=(e.shiftKey&&Math.abs(e.deltaX)<Math.abs(e.deltaY)?e.deltaY:e.deltaX)*(e.deltaMode===1?16:e.deltaMode===2?stage.clientWidth:1);deckProgress=Math.max(0,Math.min(deckCards.length-1,deckProgress+delta/Math.max(70,stage.clientWidth*.24)));paintDeck();deckWheelTimer=setTimeout(()=>{deckWheelTimer=0;if(!deckDrag&&$('.tunnel')===stage)turnDeck(Math.round(deckProgress))},180)},{passive:false});
+document.addEventListener('wheel',e=>{
+ const stage=e.target.closest('.tunnel');if(!stage||(!e.shiftKey&&Math.abs(e.deltaX)<=Math.abs(e.deltaY)))return;
+ e.preventDefault();if(deckDrag)return;
+ // Stop inertia without cancelling an already queued wheel paint.
+ cancelAnimationFrame(deckFrame);deckFrame=0;deckTarget=null;deckVelocity=0;clearTimeout(deckWheelTimer);
+ const cache=getDeckPaintCache();if(!cache)return;
+ const w=cache.width,delta=(e.shiftKey&&Math.abs(e.deltaX)<Math.abs(e.deltaY)?e.deltaY:e.deltaX)*(e.deltaMode===1?16:e.deltaMode===2?w:1);
+ deckProgress=Math.max(0,Math.min(deckCards.length-1,deckProgress+delta/Math.max(70,w*.24)));
+ queueDeckPaint();
+ deckWheelTimer=setTimeout(()=>{deckWheelTimer=0;if(!deckDrag&&cache.stage.isConnected)turnDeck(Math.round(deckProgress))},180);
+},{passive:false});
 matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change',e=>{if(e.matches){cancelDeckGesture();cancelNewsLaunch();routeTransition?.skipTransition();stopDeck();deckProgress=Math.max(0,Math.min(deckCards.length-1,Math.round(deckProgress)));paintDeck()}});
 
 document.addEventListener('visibilitychange',()=>{document.documentElement.classList.toggle('page-hidden',document.hidden);if(document.hidden){freezeDeck();cancelNewsLaunch();routeTransition?.skipTransition();paintDeck()}});
+
+matchMedia('(prefers-reduced-transparency: reduce)').addEventListener('change',()=>queueDeckPaint());
+
+// A swipe on a collection tile is not a tap, even though the page no longer scrolls.
+let collectionPress=null;
+document.addEventListener('pointerdown',e=>{if(e.isPrimary&&e.pointerType==='touch'&&e.target.closest('.collection-card'))collectionPress={id:e.pointerId,x:e.clientX,y:e.clientY,moved:false}});
+document.addEventListener('pointermove',e=>{if(collectionPress?.id===e.pointerId&&(Math.abs(e.clientX-collectionPress.x)>10||Math.abs(e.clientY-collectionPress.y)>10))collectionPress.moved=true});
+document.addEventListener('pointerup',e=>{if(collectionPress?.id===e.pointerId){if(collectionPress.moved)suppressUntil=performance.now()+350;collectionPress=null}});
+document.addEventListener('pointercancel',e=>{if(collectionPress?.id===e.pointerId)collectionPress=null});

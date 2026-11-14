@@ -4,7 +4,7 @@ import {resolve,extname} from 'node:path';
 import {createProviderSettings} from '../server/provider-settings.mjs';
 import {createApi} from '../server/api.mjs';
 const root=resolve('app'),api=createApi(),providerSettings=createProviderSettings();
-const types={'.html':'text/html; charset=utf-8','.css':'text/css','.js':'text/javascript','.json':'application/json','.webmanifest':'application/manifest+json','.svg':'image/svg+xml','.png':'image/png'};
+const types={'.html':'text/html; charset=utf-8','.css':'text/css','.js':'text/javascript','.json':'application/json','.webmanifest':'application/manifest+json','.svg':'image/svg+xml','.png':'image/png','.webp':'image/webp'};
 const server=createServer(async(req,res)=>{try{
  const url=new URL(req.url,'http://localhost');
  // A local read-only service; reject cross-site browser access and DNS rebinding.

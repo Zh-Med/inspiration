@@ -22,7 +22,7 @@ window.CollectionMotion=(()=>{
   for(const el of [copy,...copy.querySelectorAll('[id]')])el.removeAttribute('id');
   copy.querySelector('main').classList.remove('page-enter');
   copy.inert=true;copy.setAttribute('aria-hidden','true');
-  const clocks=[...app.querySelectorAll('.brand,.paper')].map(el=>el.getAnimations().map(a=>a.currentTime));
+  const clocks=[...app.querySelectorAll('.brand,.paper-breath')].map(el=>el.getAnimations({subtree:true}).map(a=>a.currentTime));
   return {copy,clocks,time:performance.now()};
  }
  function card(el){
@@ -31,8 +31,8 @@ window.CollectionMotion=(()=>{
   return {rect:{left:r.left,top:r.top,width:r.width,height:r.height},radius:parseFloat(s.borderRadius),copy:el.cloneNode(true)};
  }
  function syncClocks(snapshot){
-  [...snapshot.copy.querySelectorAll('.brand,.paper')].forEach((el,i)=>{
-   el.getAnimations().forEach((a,j)=>{const t=snapshot.clocks[i]?.[j];if(typeof t==='number')a.currentTime=t+performance.now()-snapshot.time});
+  [...snapshot.copy.querySelectorAll('.brand,.paper-breath')].forEach((el,i)=>{
+   el.getAnimations({subtree:true}).forEach((a,j)=>{const t=snapshot.clocks[i]?.[j];if(typeof t==='number')a.currentTime=t});
   });
  }
  function play({overview,shelf,source,entering,onFinish}){
@@ -41,6 +41,7 @@ window.CollectionMotion=(()=>{
   const backdrop=document.createElement('div');backdrop.className='collection-transition-backdrop';backdrop.append(overview.copy);
   overview.copy.querySelector(`.collection-card[href="${source.copy.getAttribute('href')}"]`)?.style.setProperty('visibility','hidden');
   const frame=document.createElement('div');frame.className='collection-transition-frame';
+  const compensation=document.createElement('div');compensation.className='collection-transition-compensation';
   const base=document.createElement('div');base.className='collection-transition-base';
   const scene=document.createElement('div');scene.className='collection-transition-scene';scene.append(shelf.copy);
   // Inspiration stays anchored while the collection opens underneath it.
@@ -48,37 +49,54 @@ window.CollectionMotion=(()=>{
   headerLayer.classList.add('collection-transition-masthead');headerLayer.append(header);
   const brand=header.querySelector('.brand'),nav=header.querySelector('button');
   const fromBrand=parseFloat(overview.copy.querySelector('.brand').style.fontSize),toBrand=parseFloat(brand.style.fontSize);
+  const brandSize=Math.max(fromBrand,toBrand);
+  brand.style.fontSize=`${brandSize}px`;brand.style.transformOrigin='center center';brand.style.willChange='transform';
   const headerShift=(parseFloat(overview.copy.querySelector('.masthead').style.height)-parseFloat(header.style.height))/2;
   overview.copy.querySelector('.masthead').style.visibility='hidden';shelf.copy.querySelector('.masthead').style.visibility='hidden';
   const glass=source.copy.cloneNode(false);glass.removeAttribute('href');glass.removeAttribute('id');glass.className='collection-card collection-transition-glass';glass.style.viewTransitionName='none';
+  // The expanding surface reuses the same static tint/highlights, never a viewport-sized backdrop filter.
+  glass.style.backdropFilter='none';glass.style.webkitBackdropFilter='none';
   for(const [key,offset] of [['--lamp-x',r.left],['--lamp-y',r.top],['--reflection-x',r.left],['--reflection-y',r.top]])glass.style.setProperty(key,`${(parseFloat(source.copy.style.getPropertyValue(key))||0)+offset}px`);
   const labels=document.createElement('div');labels.className='collection-transition-labels';
   labels.style.cssText=`left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px`;
   for(const child of source.copy.children)labels.append(child.cloneNode(true));
-  frame.append(base,scene,glass,labels);root.append(backdrop,frame,headerLayer);document.body.append(root);
+  compensation.append(base,scene,glass,labels);frame.append(compensation);root.append(backdrop,frame,headerLayer);document.body.append(root);
+  // Stop all cloned CSS animations (including pseudo-elements) before starting outer motion.
+  root.getAnimations({subtree:true}).forEach(a=>a.pause());
   syncClocks(overview);syncClocks(shelf);
-  brand.getAnimations().forEach((a,i)=>{const t=shelf.clocks[0]?.[i];if(typeof t==='number')a.currentTime=t+performance.now()-shelf.time});
+  brand.getAnimations({subtree:true}).forEach((a,i)=>{const t=shelf.clocks[0]?.[i];if(typeof t==='number')a.currentTime=t});
   const actual=document.querySelector('body > .app'),main=actual.querySelector('main'),actualNav=actual.querySelector('#navigation-button'),wasInert=main.inert;
   // Paper leaves explicitly set visibility, so hide their entire compositing layer.
   // Keep the live back button available during the movement.
   actual.style.opacity='0';actual.style.pointerEvents='none';main.inert=true;actualNav.style.pointerEvents='auto';
-  const duration=entering?720:560,steps=60,frames={mask:[],scene:[],glass:[],base:[],backdrop:[],labels:[],header:[],brand:[],nav:[]};
+  const duration=entering?720:560,steps=60,frames={frame:[],compensation:[],scene:[],glass:[],base:[],backdrop:[],labels:[],header:[],brand:[],nav:[]};
   const scale=Math.max(r.width/width,r.height/height),dx=r.left+r.width/2-width/2,dy=r.top+r.height/2-height/2;
+  const bounds=[];
   // Critically damped, monotonic settling; each layer samples the same progress.
   const settle=t=>(1-(1+8.5*t)*Math.exp(-8.5*t))/(1-9.5*Math.exp(-8.5));
   for(let i=0;i<=steps;i++){
    const offset=i/steps,p=entering?settle(offset):1-settle(offset),q=1-p;
-   frames.mask.push({offset,clipPath:`inset(${r.top*q}px ${(width-r.left-r.width)*q}px ${(height-r.top-r.height)*q}px ${r.left*q}px round ${source.radius*q+12*Math.sin(Math.PI*p)}px)`});
+   bounds.push({x:r.left*q,y:r.top*q,sx:(r.width+(width-r.width)*p)/width,sy:(r.height+(height-r.height)*p)/height,radius:source.radius*q+12*Math.sin(Math.PI*p)});
    frames.scene.push({offset,transform:`translate3d(${dx*q}px,${dy*q}px,0) scale(${scale+(1-scale)*p})`,opacity:smooth(.035,.60,p)});
    frames.glass.push({offset,opacity:1-smooth(.06,.64,p)});
    frames.base.push({offset,opacity:smooth(.08,.62,p)});
    frames.backdrop.push({offset,opacity:1-smooth(.08,.84,p)});
    frames.labels.push({offset,opacity:1-smooth(0,.24,p),transform:`translate3d(${-r.left*p}px,${-r.top*p}px,0)`});
    frames.header.push({offset,transform:`translateY(${headerShift*q}px)`});
-   frames.brand.push({offset,fontSize:`${fromBrand+(toBrand-fromBrand)*p}px`});
+   frames.brand.push({offset,transform:`scale(${(fromBrand+(toBrand-fromBrand)*p)/brandSize})`});
    frames.nav.push({offset,opacity:smooth(.25,.8,p)});
   }
-  const nodes={mask:frame,scene,glass,base,backdrop,labels,header,brand,nav};
+  // Preserve the old 61-point trajectory exactly. Subdivide its linear segments
+  // only to bound interpolation error between independent inverse transforms.
+  const subdivisions=4;
+  for(let n=0;n<=steps*subdivisions;n++){
+   const segment=Math.min(steps-1,Math.floor(n/subdivisions)),fraction=n/subdivisions-segment;
+   const a=bounds[segment],b=bounds[segment+1],mix=key=>a[key]+(b[key]-a[key])*fraction;
+   const x=mix('x'),y=mix('y'),sx=mix('sx'),sy=mix('sy'),radius=mix('radius'),offset=n/(steps*subdivisions);
+   frames.frame.push({offset,transform:`translate3d(${x}px,${y}px,0) scale(${sx},${sy})`,borderRadius:`${radius/sx}px / ${radius/sy}px`});
+   frames.compensation.push({offset,transform:`translate3d(${-x/sx}px,${-y/sy}px,0) scale(${1/sx},${1/sy})`});
+  }
+  const nodes={frame,compensation,scene,glass,base,backdrop,labels,header,brand,nav};
   const animations=Object.entries(frames).map(([key,keyframes])=>nodes[key].animate(keyframes,{duration,fill:'both',easing:'linear'}));
   const start=document.timeline.currentTime;animations.forEach(a=>a.startTime=start);
   let disposed=false;

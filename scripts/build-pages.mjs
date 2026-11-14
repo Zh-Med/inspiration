@@ -5,7 +5,7 @@ import {createHash} from 'node:crypto';
 import {readState,dataDir} from '../server/store.mjs';
 import {contentView,publicEvent,publicTool} from '../server/api.mjs';
 // Explicit asset list: never recursively copy the workspace or runtime data.
-export const assets=['index.html','style.css','app.js','provider-settings.js','content.js','runtime-config.js','news-dates.js','calendar.js','collection-motion.js','scene.js','manifest.webmanifest','icon.svg','icon-192.png','icon-512.png','sw.js'];
+export const assets=['index.html','style.css','app.js','provider-settings.js','content.js','runtime-config.js','news-dates.js','calendar.js','collection-motion.js','scene.js','manifest.webmanifest','icon.svg','icon-192.png','icon-512.png','paper-gold.webp','paper-blank-1.webp','paper-blank-2.webp','paper-blank-3.webp','paper-blank-4.webp','paper-blank-5.webp','paper-breath.webp','sw.js'];
 export async function buildPages({dir=dataDir,out=resolve('dist')}={}){
  const state=await readState(dir),view=contentView(state);
  if(!state.updatedAt||!view.stories.length)throw Error('No collected reading content; refusing to publish an empty replacement');

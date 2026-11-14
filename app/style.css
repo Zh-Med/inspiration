@@ -28,39 +28,53 @@ body{background:#050505}.app{max-width:760px}.masthead{border:0;position:relativ
 .deck-view main{padding:0;min-height:0}
 .deck-view .page-enter{animation:none}
 .deck-page{position:relative;height:calc(100svh - 88px - env(safe-area-inset-top));min-height:520px}
-.tunnel{position:absolute;top:8px;bottom:calc(10px + env(safe-area-inset-bottom));left:-24px;right:-24px;overflow:clip;isolation:isolate;cursor:grab;touch-action:pan-y;user-select:none}
+.tunnel{position:absolute;top:8px;bottom:calc(10px + env(safe-area-inset-bottom));left:-24px;right:-24px;overflow:clip;isolation:isolate;cursor:grab;touch-action:pinch-zoom;user-select:none}
 .tunnel:active{cursor:grabbing}
 .tunnel:focus-visible{outline:2px solid #dfcda8;outline-offset:-4px;border-radius:4px}
 .tunnel .paper{
- position:absolute;left:0;top:0;width:90%;height:94%;overflow:hidden;border-radius:3px;
+ position:absolute;left:0;top:0;width:90%;height:94%;overflow:visible;border-radius:3px;
  transform-origin:50% 50%;color:#2c2317;
- box-shadow:15px 9px 23px rgba(0,0,0,calc(.349 * var(--paper-fade,1))),4px 3px 7px rgba(0,0,0,calc(.2 * var(--paper-fade,1)));
+
 }
-.paper-material{position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:linear-gradient(105deg,var(--paper-0) 0%,var(--paper-1) 38%,var(--paper-2) 76%,var(--paper-3) 100%);background-color:var(--paper-solid,#cec0a9);opacity:calc(.96 * var(--paper-fade,1))}
+.paper-face{position:absolute;inset:0;overflow:hidden;border-radius:inherit}
+.paper-shadow{position:absolute;inset:0;border-radius:inherit;pointer-events:none;box-shadow:15px 9px 23px rgba(0,0,0,.349),4px 3px 7px rgba(0,0,0,.2)}
+.paper-material{position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:linear-gradient(105deg,var(--paper-0) 0%,var(--paper-1) 36%,var(--paper-2) 74%,var(--paper-3) 100%);background-color:var(--paper-solid,#cec0a9);opacity:.96}
+/* Rear sheets rasterize one fixed material instead of three animated sublayers.
+   Alpha stops include the previous shade/light/reflection gains; base palette is shared. */
+.paper:not(.is-front) .paper-material{
+ background-image:
+  linear-gradient(112deg,transparent 20%,#fffdf001 31%,#fffdf018 46%,#fffdf003 65%,transparent 84%),
+  radial-gradient(ellipse 90% 100% at 55% 42%,#fffef81f 0%,#fffdf30b 40%,transparent 82%),
+  linear-gradient(100deg,#1815100d 0%,transparent 24%,transparent 79%,#1815100a 100%),
+  linear-gradient(105deg,var(--paper-0) 0%,var(--paper-1) 36%,var(--paper-2) 74%,var(--paper-3) 100%);
+ background-size:170% 170%,100% 100%,100% 100%,100% 100%;background-position:center;background-repeat:no-repeat;
+}
+.paper:not(.is-front) .paper-light,.paper:not(.is-front) .paper-reflection,.paper:not(.is-front) .paper-shade{display:none}
 /* REA confirmed ultraThinMaterial on the native page label. Blur is Web tuned. */
 @supports ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
  .paper-material{background-color:transparent}
  .paper.is-front .paper-material{backdrop-filter:blur(6px) saturate(82%);-webkit-backdrop-filter:blur(6px) saturate(82%)}
 }
-.paper::after{content:'';position:absolute;inset:0;border-radius:inherit;border:1px solid #fff9e624;border-left-color:#fffbea54;border-right-color:#d9cfb529;pointer-events:none;z-index:4;opacity:var(--paper-fade,1)}
-.tunnel.is-moving .paper:not([aria-hidden=true]){will-change:transform}
+.paper-edge{position:absolute;inset:0;border-radius:inherit;border:1px solid #fff9e624;border-left-color:#fffbea54;border-right-color:#d9cfb529;pointer-events:none;z-index:4;opacity:1}
+.tunnel .paper:not([aria-hidden=true]){will-change:transform}
 .paper[aria-hidden=true]{display:none}
-.paper-shade{position:absolute;inset:0;pointer-events:none;opacity:calc(var(--shade,.16) * var(--paper-fade,1));background:linear-gradient(100deg,#18151055 0%,transparent 24%,transparent 79%,#18151040 100%);z-index:1}
+.paper-shade{position:absolute;inset:0;pointer-events:none;opacity:.16;background:linear-gradient(100deg,#18151055 0%,transparent 24%,transparent 79%,#18151040 100%);z-index:1}
 .paper-light{
- position:absolute;inset:0;pointer-events:none;z-index:2;
- background:radial-gradient(ellipse 90% 100% at var(--light-x,55%) var(--light-y,42%),#fffef861 0%,#fffdf324 40%,transparent 82%);
- opacity:calc(var(--light-power,.28) * var(--paper-fade,1));
+ position:absolute;inset:-18%;pointer-events:none;z-index:2;
+ background:radial-gradient(ellipse 66.1765% 73.5294% at 53.6765% 44.1176%,#fffef861 0%,#fffdf324 40%,transparent 82%);
+ opacity:.28;
 }
-.paper-reflection{position:absolute;inset:0;pointer-events:none;z-index:2;background:linear-gradient(var(--sheen-angle,112deg),transparent 20%,#fffdf004 calc(var(--sheen-x,46%) - 15%),#fffdf044 var(--sheen-x,46%),#fffdf008 calc(var(--sheen-x,46%) + 19%),transparent 84%);opacity:calc(.34 * var(--paper-fade,1))}
-.paper-select{position:absolute;inset:0;z-index:3;width:100%;height:100%;padding:0;text-align:left;border-radius:0;opacity:var(--paper-fade,1)}
+.paper-reflection{position:absolute;inset:-35%;pointer-events:none;z-index:2;background:linear-gradient(112deg,transparent 20%,#fffdf004 31%,#fffdf044 46%,#fffdf008 65%,transparent 84%);opacity:.34}
+.paper-select{position:absolute;inset:0;z-index:3;width:100%;height:100%;padding:0;text-align:left;border-radius:0;opacity:1}
 .paper-select:active{transform:none}
 .paper-spine{position:absolute;right:13px;top:12.5%;max-height:85.5%;max-width:calc(100% - 26px);writing-mode:vertical-rl;font-family:Georgia,'Songti SC',serif;font-size:18px;letter-spacing:0;white-space:normal;overflow-wrap:anywhere;color:#2c2317}
 @media(max-width:540px){.deck-page{height:calc(100svh - 78px - env(safe-area-inset-top))}}
-@media(prefers-reduced-motion:reduce){.tunnel.is-moving .paper:not([aria-hidden=true]){will-change:auto}}
-@media(prefers-reduced-transparency:reduce){.paper-material,.paper.is-front .paper-material{background-color:var(--paper-solid,#cec0a9);opacity:var(--paper-fade,1);backdrop-filter:none;-webkit-backdrop-filter:none}.paper-reflection{display:none}}
+@media(prefers-reduced-motion:reduce){.tunnel .paper:not([aria-hidden=true]){will-change:auto}}
+@media(prefers-reduced-transparency:reduce){.paper-material,.paper.is-front .paper-material{background-color:var(--paper-solid,#cec0a9);opacity:1;backdrop-filter:none;-webkit-backdrop-filter:none}.paper-reflection{display:none}}
 
 /* A soft breath travels through gold and blank leaves towards the back. */
-.paper::before{
+.paper-breath{position:absolute;inset:0;pointer-events:none;z-index:2;opacity:.386667}
+.paper-breath::before{
  content:'';position:absolute;inset:0;z-index:2;pointer-events:none;
  background:radial-gradient(ellipse 95% 105% at 56% 46%,#ffffffe6 0%,#ffffffb3 42%,#ffffff33 78%,transparent 100%);
  opacity:0;
@@ -70,11 +84,11 @@ body{background:#050505}.app{max-width:760px}.masthead{border:0;position:relativ
 }
 @keyframes paper-breath{
  0%{opacity:0}
- 16.666667%,33.333333%{opacity:calc(var(--breath-peak,.58) * 2 / 3)}
+ 16.666667%,33.333333%{opacity:1}
  48.633333%,100%{opacity:0}
 }
-.paper[aria-hidden=true]::before,.page-hidden .paper::before{animation-play-state:paused}
-@media(prefers-reduced-motion:reduce){.paper::before{animation:none;opacity:0}}
+.paper[aria-hidden=true] .paper-breath::before,.page-hidden .paper-breath::before{animation-play-state:paused}
+@media(prefers-reduced-motion:reduce){.paper-breath::before{animation:none;opacity:0}}
 
 .masthead>#navigation-button:hover{background:#ded0b710}
 .masthead>#navigation-button:focus-visible{outline:2px solid #ded0b7}
@@ -168,7 +182,8 @@ body{background:#050505}.app{max-width:760px}.masthead{border:0;position:relativ
 /* The destination is inside the expanding tile from the first frame. */
 .collection-transition{position:fixed;inset:0;z-index:50;pointer-events:none;isolation:isolate;overflow:hidden}
 .collection-transition-backdrop,.collection-transition-frame,.collection-transition-base,.collection-transition-scene{position:absolute;inset:0}
-.collection-transition-frame{overflow:hidden;will-change:clip-path}
+.collection-transition-frame{overflow:hidden;transform-origin:0 0;will-change:transform}
+.collection-transition-compensation{position:absolute;inset:0;transform-origin:0 0;will-change:transform}
 .collection-transition-base{background:#050505}
 .collection-transition-scene{transform-origin:center center;will-change:transform,opacity}
 .collection-transition .navigation-snapshot{position:relative;margin:0 auto;max-width:none}
@@ -219,6 +234,40 @@ body{background:#050505}.app{max-width:760px}.masthead{border:0;position:relativ
 .provider-panel button:disabled{opacity:.5;cursor:wait}
 
 /* Freeze ambient layers during navigation; keep geometry continuous. */
-.collection-transition .paper::before,.collection-transition-active>.app .paper::before{animation-play-state:paused}
-.collection-transition .paper-material,.collection-transition .paper.is-front .paper-material,.collection-transition .collection-transition-glass{backdrop-filter:none;-webkit-backdrop-filter:none}
-.window-inactive .paper::before,.window-inactive .brand{animation-play-state:paused}
+.collection-transition .paper-breath::before,.collection-transition-active>.app .paper-breath::before{animation-play-state:paused}
+.collection-transition .paper-material,.collection-transition .paper.is-front .paper-material,.collection-transition .collection-card,.collection-transition .collection-transition-glass{backdrop-filter:none;-webkit-backdrop-filter:none}
+.window-inactive .paper-breath::before,.window-inactive .brand{animation-play-state:paused}
+
+/* Read-only phone diagnostic: no storage, no effect on the normal material. */
+.paper-blur-off .paper.is-front .paper-material{backdrop-filter:none;-webkit-backdrop-filter:none}
+
+.page-hidden .tunnel .paper,.window-inactive .tunnel .paper{will-change:auto}
+
+@media(prefers-reduced-transparency:reduce){
+ .paper:not(.is-front) .paper-material{background-image:linear-gradient(105deg,var(--paper-0) 0%,var(--paper-1) 36%,var(--paper-2) 74%,var(--paper-3) 100%);background-size:100% 100%}
+}
+
+/* Snapshot interiors are frozen; explicit outer Web Animations still drive the transition. */
+.collection-transition *,.collection-transition *::before,.collection-transition *::after{animation-play-state:paused!important;transition:none!important}
+.collection-transition-active>.app .brand{animation-play-state:paused}
+
+/* Six decoded material bitmaps share palette, illumination, edge and shadow.
+   Reference paper is 351x704 CSS px, with 48px transparent padding. */
+.paper-raster{display:none;position:absolute;left:-13.675214%;top:-6.818182%;width:127.350427%;height:113.636364%;max-width:none;pointer-events:none;user-select:none}
+.paper.has-raster:not(.is-front)>.paper-raster{display:block}
+.paper.has-raster:not(.is-front)>.paper-shadow,
+.paper.has-raster:not(.is-front)>.paper-face>.paper-material,
+.paper.has-raster:not(.is-front)>.paper-face>.paper-edge{display:none}
+.has-breath-texture .paper-breath::before{background-image:url('paper-breath.webp');background-size:100% 100%;background-repeat:no-repeat}
+@media(prefers-reduced-transparency:reduce){
+ .paper.has-raster:not(.is-front)>.paper-raster{display:none}
+ .paper.has-raster:not(.is-front)>.paper-shadow,
+ .paper.has-raster:not(.is-front)>.paper-face>.paper-material,
+ .paper.has-raster:not(.is-front)>.paper-face>.paper-edge{display:block}
+}
+
+/* Navigation surfaces do not scroll vertically; detail pages retain native reading scroll. */
+html.navigation-locked{height:100%;overflow:hidden;overscroll-behavior:none}
+body.deck-view,body.collections-view{position:fixed;inset:0;width:100%;height:100%;overflow:hidden;overscroll-behavior:none}
+.deck-view .deck-page{min-height:0}
+.news-calendar,dialog{overscroll-behavior:contain;touch-action:pan-y pinch-zoom}

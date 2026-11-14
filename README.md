@@ -2,7 +2,7 @@
 
 iPhone 优先的 AI 晨报与科研工具雷达。保留英文原始标题与出处，约 5 分钟阅读重要进展，发现可采用的科研工作流。
 
-当前界面：News／Skills／Medicine 三个玻璃方格、星空背景、香槟金纸张书架、连续拖动与返回转场。界面已由用户确认，本次只改采集与发布配置。
+当前界面：News／Skills／Medicine 三个玻璃方格、星空背景、香槟金纸张书架、连续拖动与返回转场。当前 v60 已获用户确认并授权上传，包含共享纸页材质、转场优化和导航页纵向锁定。
 
 ## 运行
 
@@ -13,6 +13,7 @@ npm start                       # 本机 http://localhost:4173
 npm run collect                 # 公开新闻 + GitHub 项目采集
 npm run collect -- --news-only  # 只更新新闻
 npm run build                   # 生成 dist/ 静态 PWA，要求已有采集内容
+npm run preview:phone           # 同 Wi-Fi 手机预览，仅提供 dist；Ctrl-C 停止
 npm run check
 npm test
 ```
@@ -41,3 +42,7 @@ npm test
 - 收藏与偏好留在当前设备；清阅读缓存不删除收藏。重要收藏请导出。
 - 不设置远程控制、入站隧道或 Mac 自托管 runner。
 - 未来 LLM 密钥由用户在独立服务管理端配置，本项目不读取密钥文件。
+
+手机预览使用终端输出的局域网地址；多网卡时用 `PREVIEW_HOST` 指定 Mac 的 Wi-Fi IPv4。仅临时监听该地址，不使用隧道或远程控制。HTTP 预览只验收触控和视觉，PWA 安装、更新及离线须在 HTTPS 发布后复核。验收前不上传；确认后同步到本机 `inspiration/` 上传仓库（远程 `Zh-Med/inspiration`）。
+
+当前 v60 使用共享透明纸页纹理，书架与总览关闭上下滚动，详情保留阅读滚动；用户已确认此版可上传。材质生成方式、回退路径和资源预算见 [性能记录](docs/PERFORMANCE.md)。

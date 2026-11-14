@@ -55,3 +55,15 @@ test('empty collection cannot replace a working deployment',async()=>{
  const temp=await mkdtemp(join(tmpdir(),'inspiration-empty-'));
  try{await assert.rejects(buildPages({dir:temp,out:join(temp,'dist')}),/No collected reading content/)}finally{await rm(temp,{recursive:true,force:true})}
 });
+
+test('shared paper textures are transparent WebP assets with a bounded download budget',async()=>{
+ const textures=assets.filter(name=>name.startsWith('paper-'));
+ assert.equal(textures.length,7);let bytes=0;
+ for(const name of textures){
+  const data=await readFile(new URL('../app/'+name,import.meta.url));bytes+=data.length;
+  assert.equal(data.toString('ascii',0,4),'RIFF');assert.equal(data.toString('ascii',8,12),'WEBP');
+  assert.equal(data.toString('ascii',12,16),'VP8X');assert.ok(data[20]&0x10,'transparent padding must survive encoding');
+  const width=data.readUIntLE(24,3)+1,height=data.readUIntLE(27,3)+1;assert.ok(width*height<=900000);
+ }
+ assert.ok(bytes<400000,`texture downloads ${bytes} bytes`);
+});
