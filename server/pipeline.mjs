@@ -1,3 +1,4 @@
+import {selectEditions} from './editorial.mjs';
 import {collectTldr} from './tldr.mjs';
 import {spawn} from 'node:child_process';
 import {selectNews} from './news-priority.mjs';
@@ -36,7 +37,7 @@ export function buildDigest(state,date,now,feedConfig=feeds){
  const coverage=windowFor(date);if(Date.parse(coverage.end)>Date.parse(now))throw Error('Cannot publish a future 08:00 digest');
  const within=t=>t&&t>=coverage.start&&t<coverage.end;
  const eligible=Object.values(state.events).filter(e=>e.issuePrecision!=='month'&&!retiredSourceIds.includes(e.sourceId)&&e.evidence!=='title-only'&&within(e.publishedAt));
- const selected=selectNews(eligible,limits.digestItems).map(e=>({eventId:e.id,version:e.version,isUpdate:false}));
+ const selected=selectNews(eligible.filter(e=>e.collection!=='medicine'),limits.digestItems).map(e=>({eventId:e.id,version:e.version,isUpdate:false}));
  const statuses=feedConfig.map(f=>state.sources[f.id]);
  const ok=statuses.filter(s=>s?.status==='ok'&&s?.lastSuccessAt&&Date.parse(now)-Date.parse(s.lastSuccessAt)<2*3600000).length;
  const status=ok===0?'unavailable':ok<feedConfig.length?'partial':selected.length?'ready':'empty';
@@ -120,6 +121,7 @@ export async function collect({dir=dataDir,request=createFetcher(),now=new Date(
  const dates=new Set([latestDue(now)]);
  for(const e of Object.values(state.events)){if(e.issuePrecision==='month')continue;const d=day(new Date(Date.parse(e.publishedAt)+16*3600000));if(windowFor(d).end<=now)dates.add(d)}
  for(const date of feedConfig.length?[...dates].sort():[])buildDigest(state,date,now,feedConfig);
+ selectEditions(state,now);
  run.finishedAt=new Date().toISOString();state.runs=[run,...state.runs].slice(0,30);state.updatedAt=now;
  await writeState(state,dir);return run;
  },dir);

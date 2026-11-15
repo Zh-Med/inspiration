@@ -45,7 +45,7 @@ export const searches = [
   {id:'literature',query:'literature review in:description stars:>=100 archived:false fork:false'},
   {id:'medical',query:'medical imaging in:description stars:>=200 archived:false fork:false'},
 ];
-export const limits={feedItems:60,discoveryPerQuery:10,enrichRepos:6,requestBytes:2_000_000,timeoutMs:15_000,digestItems:10,lookbackDays:30};
+export const limits={feedItems:60,discoveryPerQuery:10,enrichRepos:6,requestBytes:2_000_000,timeoutMs:15_000,digestItems:5,lookbackDays:30};
 
 // Separate daily shelf; never participates in News ranking or model summaries.
 export const tldrSource={id:'tldr',name:'TLDR',url:'https://tldr.tech/'};

@@ -53,3 +53,10 @@ Nature公开页面使用无Cookie跳转：仅明确启用时允许 `idp.nature.c
 `npm run check`检查JS语法，`npm test`覆盖日期、去重、XML、来源隔离、重试、限流、持久化、只读API、密钥写入拒绝、重大新闻排序、HTML日期隔离、历史回填、静态子路径与空构建拒绝。部署／手机步骤见 [DEPLOYMENT.md](DEPLOYMENT.md)。
 
 真实来源实测见 [NEWS-COVERAGE.md](NEWS-COVERAGE.md)。待验收：实际GitHub调度、iPhone安装／离线／Wi-Fi＋蜂窝、系统推送和连续七天运行。未经实测不标完成。
+
+## 2026-11-15 推荐限额
+
+
+`server/editorial.mjs`将Skills和Medicine入选ID、内容版本和推荐业务日持久化至公开采集状态的`editorial`。北京时间08:00业务日，周一至周日每类最多10条，按剩余天数分配每天1–2条；不足不凑数，重试仅补空缺，不替换已入选内容。新周优先未推荐内容；仓库仅stars变化不重新推荐，pushedAt或医学事件版本变化后才可再次入选。推荐日期不替代原始发布日期。书架展示本周累计；收藏和原详情深链保留。
+
+News日报仅选非Medicine事件最多5条，旧日报导出也应用限额。TLDR保持每日固定前10条、失败补齐。Web Push未实现，重大事件优先排序不等于系统通知。

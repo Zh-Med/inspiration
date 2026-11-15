@@ -99,15 +99,15 @@ body{background:#050505}.app{max-width:760px}.masthead{border:0;position:relativ
 .collections-view .brand{font-size:26px;font-weight:650;letter-spacing:-.5px}
 .collection-search{background:#1c1c1e;border-radius:12px;padding:5px 12px;margin:6px 0 28px;color:#a7a3a0}
 .collection-search input{font-size:17px;height:34px}
-/* Nearly square film-glass tiles, in desaturated grey gold. */
-.collection-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;width:calc(50% + 4px);isolation:isolate}
-.collection-card{position:relative;isolation:isolate;display:flex;flex-direction:column;align-items:flex-start;justify-content:space-between;gap:8px;min-width:0;min-height:0;aspect-ratio:1.12;padding:10px;border-radius:10px;overflow:hidden;color:#f4f0e6;background:linear-gradient(135deg,#aaa69836,#9b978b24 55%,#aaa49430);border:1px solid rgba(230,225,210,var(--edge-light,.2));box-shadow:inset 0 1px 0 #fffef02b,inset 0 -1px 0 #d6ceba12;backdrop-filter:blur(28px) saturate(75%);-webkit-backdrop-filter:blur(28px) saturate(75%);transition:background .2s,transform .3s var(--ease)}
-.collection-card::before{content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;inset:auto;left:0;top:0;width:360px;height:360px;background:radial-gradient(circle at center,#fff9de80 0%,#e4ddc333 40%,transparent 70.71%);transform:translate3d(calc(var(--lamp-x,0px) - 180px),calc(var(--lamp-y,0px) - 180px),0);opacity:var(--lamp-power,.35)}
-.collection-card::after{content:'';position:absolute;inset:0;pointer-events:none;border-radius:inherit;inset:auto;left:0;top:0;width:150px;height:100px;background:radial-gradient(ellipse at center,#fffced33,transparent 70.71%);transform:translate3d(calc(var(--reflection-x,0px) - 75px),calc(var(--reflection-y,0px) - 50px),0);opacity:var(--lamp-power,.35)}
-.collection-card:hover{background-color:#d1cbbb16;text-decoration:none}
-.collection-card:active{transform:scale(.985)}
-.collection-card h2{font-size:14px;font-weight:550;line-height:1.2;letter-spacing:-.5px;margin:0}
-.collection-updated{flex-shrink:0;color:#e3ded0}
+/* Four compact glass lenses share the scene's moving front light. */
+.collection-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;width:100%;isolation:isolate}
+.collection-card{position:relative;isolation:isolate;display:flex;flex-direction:column;align-items:flex-start;justify-content:space-between;gap:6px;min-width:0;min-height:44px;aspect-ratio:1.12;padding:clamp(6px,1.8vw,10px);border-radius:14px;overflow:hidden;color:#fff8eb;background-color:#b8ad8c08;border:1px solid rgba(247,242,222,calc(.12 + var(--edge-light,.2)*.45));box-shadow:0 5px 13px #00000030,inset 0 1px 1px #ffffff4d,inset 1px 0 1px #fff9df24,inset 0 -1px 1px #a99b7338;transition:background-color .2s,transform .3s var(--ease)}
+.collection-card::before{content:'';position:absolute;z-index:-1;pointer-events:none;left:0;top:0;width:240px;height:200px;background:radial-gradient(ellipse at center,#fffaf052 0%,#dfdbc61a 32%,transparent 68%);transform:translate3d(calc(var(--reflection-x,0px) - 120px),calc(var(--reflection-y,0px) - 100px),0);opacity:var(--lamp-power,.35)}
+.collection-card::after{content:'';position:absolute;inset:0;pointer-events:none;border-radius:inherit;box-shadow:inset -1px -1px 1px #ffffff20;background:linear-gradient(145deg,#fffff5a3,transparent 30%,#e8e2c51f 55%,#ffffef70 78%,transparent);padding:1px;-webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask-composite:exclude;opacity:calc(.35 + var(--lamp-power,.35)*.65)}
+.collection-card:hover{background-color:#d1cbbb14;text-decoration:none}
+.collection-card:active{transform:scale(.975)}
+.collection-card h2{font-size:clamp(10px,3vw,14px);font-weight:550;line-height:1.2;letter-spacing:-.3px;margin:0;white-space:nowrap;text-shadow:0 1px 3px #0009}
+.collection-updated{flex-shrink:0;color:#f3ebd8;text-shadow:0 1px 3px #0009}
 .collection-empty{grid-column:1/-1;color:var(--muted);padding-top:18px}
 
 
@@ -118,7 +118,8 @@ body{background:#050505}.app{max-width:760px}.masthead{border:0;position:relativ
 .masthead .brand{color:#fff0cd}
 .page-hidden .brand{animation-play-state:paused}
 .collection-updated{font-family:Georgia,'Times New Roman',serif;font-size:14px;letter-spacing:.02em;line-height:1;font-variant-numeric:lining-nums tabular-nums}
-.collection-updated>span{font-size:14px}
+.collection-updated>span{font-size:inherit}
+@media(max-width:380px){.collection-updated{font-size:12px}}
 .calendar-shortcut{position:fixed;right:max(20px,env(safe-area-inset-right));bottom:calc(24px + env(safe-area-inset-bottom));z-index:60;display:grid;place-items:center;width:50px;height:50px;padding:0;border-radius:50%;isolation:isolate;color:#f4f0e6;background:linear-gradient(145deg,#ffffff14,#ffffff03 48%,#e7d8b90a);border:1px solid #fff7e52e;box-shadow:0 6px 18px #0003,inset 0 1px 1px #ffffff52,inset 0 -1px 1px #fff5dd18;backdrop-filter:blur(12px) saturate(125%);-webkit-backdrop-filter:blur(12px) saturate(125%);transition:background .18s,transform .18s var(--ease)}
 .calendar-shortcut::before{content:'';position:absolute;inset:2px;border-radius:inherit;pointer-events:none;background:linear-gradient(135deg,#ffffff24,transparent 35%,transparent 68%,#fff5df0f);z-index:-1}
 .calendar-shortcut svg{width:23px;height:23px;stroke-width:1.6;filter:drop-shadow(0 1px 2px #0005)}
@@ -175,6 +176,10 @@ body{background:#050505}.app{max-width:760px}.masthead{border:0;position:relativ
 .app{position:relative;z-index:1}
 :root{--film-stops:#c7c2af28,#77756e19 55%,#a6a18f21;--film-filter:blur(28px) saturate(75%)}
 .collection-card,.news-calendar{background-image:linear-gradient(135deg,var(--film-stops));backdrop-filter:var(--film-filter);-webkit-backdrop-filter:var(--film-filter)}
+/* Web approximation of liquid glass: transparent body, bright curved rim. */
+.collection-card{--film-stops:#f8f3dc18,#b7b5aa08 46%,#ded7c614;--film-filter:blur(12px) saturate(135%) brightness(1.08)}
+@media(prefers-reduced-transparency:reduce){.collection-card{background:#292820;backdrop-filter:none;-webkit-backdrop-filter:none}.collection-card::before,.collection-card::after{display:none}}
+@supports not (backdrop-filter:blur(1px)){.collection-card{background-color:#292820}}
 @media(prefers-reduced-transparency:reduce){.news-calendar{background-color:#26251f;backdrop-filter:none;-webkit-backdrop-filter:none}.news-calendar::before,.news-calendar::after{display:none}}
 
 .collection-card>h2,.collection-card>.collection-updated{position:relative;z-index:1}

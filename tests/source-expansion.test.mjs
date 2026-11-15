@@ -61,12 +61,12 @@ test('all four unconfirmed journals stay outside the active collector; retired a
   const state=emptyState(),rows=await parseFeed(issue(),nature.format,nature.url),cover=normalizeArticle(rows[0],nature,now);
   const old=normalizeArticle({title:'Archived preprint',url:'https://arxiv.org/abs/example',publishedAt:'2026-11-12',excerpt:'Previously collected abstract.'},{id:'arxiv-neuro',name:'arXiv',evidence:'preprint',collection:'medicine'},now);
   mergeArticle(state,old);mergeArticle(state,cover);state.updatedAt=now;
-  const digest=buildDigest(state,'2026-11-13',now,[]);assert.deepEqual(digest.items.map(i=>i.eventId),[cover.id]);
+  const digest=buildDigest(state,'2026-11-13',now,[]);assert.equal(digest.items.length,0); // Medicine has its own capped weekly edition.
   // Also exercise a stored digest created before retirement.
   digest.items.push({eventId:old.id,version:1});assert.equal(contentView(state,now).stories.length,1);
   await writeState(state,temp);await buildPages({dir:temp,out:join(temp,'dist')});
   const exported=JSON.parse(await readFile(join(temp,'dist/data/content.json')));assert.equal(exported.stories.length,1);assert.equal(exported.stories[0].coverConfirmed,true);
-  const issueExport=JSON.parse(await readFile(join(temp,'dist/data/digests/2026-11-13.json')));assert.equal(issueExport.stories.length,1);
+  const issueExport=JSON.parse(await readFile(join(temp,'dist/data/digests/2026-11-13.json')));assert.equal(issueExport.stories.length,0);
   assert.equal(Object.keys((await readState(temp)).events).length,2,'retirement does not destroy historical records');
  }finally{await rm(temp,{recursive:true,force:true})}
 });

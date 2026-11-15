@@ -249,7 +249,7 @@ function applyContent(data){
  for(const [date,issue] of Object.entries(data.digests)){issueMetadata[date]=issue;newsByDate[date]=issue.items.map(i=>stories.find(s=>s.id===i.eventId)).filter(Boolean)}
  tldrIssue=Object.values(data.tldrIssues||{}).sort((a,b)=>b.date.localeCompare(a.date))[0]||null;
  collections[3].items=tldrIssue?.items||[];
- collections[0].items=stories.filter(s=>s.collection!=='tldr');collections[1].items=tools;collections[2].items=stories.filter(s=>s.collection==='medicine');
+ collections[0].items=stories.filter(s=>s.collection!=='tldr');collections[1].items=data.tools;collections[2].items=data.recommendations?data.recommendations.medicine.map(p=>stories.find(s=>s.id===p.id)).filter(Boolean):stories.filter(s=>s.collection==='medicine');
  for(const c of collections)c.updatedAt=c.items.length?(c.id==='tldr'?tldrIssue?.updatedAt:data.updatedAt):null;
 }
 applyContent(Content.snapshot);
@@ -337,7 +337,7 @@ function updateConnection(){
 window.addEventListener('online',updateConnection);window.addEventListener('offline',updateConnection);render();
 if('serviceWorker'in navigator&&window.isSecureContext){navigator.serviceWorker.register('sw.js').catch(()=>{document.documentElement.dataset.cacheStatus='unavailable'})}
 
-document.addEventListener('click',e=>{const card=e.target.closest('[data-deck]');if(card){const index=Number(card.dataset.deck);if(index===deckIndex&&Math.abs(deckProgress-index)<.05){const item=deckCards[index];if(!item.blank)location.hash=`${tools.includes(item)?'tool':'story'}/${item.id}`}else turnDeck(index)}});
+document.addEventListener('click',e=>{const card=e.target.closest('[data-deck]');if(!card)return;const index=Number(card.dataset.deck),item=deckCards[index];if(!item||item.blank)return;location.hash=`${item.collection==='tools'?'tool':'story'}/${item.id}`;});
 document.addEventListener('pointerdown',e=>{
  const stage=e.target.closest('.tunnel');
  if(!stage||deckDrag||!e.isPrimary||e.target.closest('[data-save]')||e.button!==0||e.clientX<24||e.clientX>innerWidth-24)return;
