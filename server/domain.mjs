@@ -1,7 +1,7 @@
 import {createHash} from 'node:crypto';
 export const hash=s=>createHash('sha256').update(s).digest('hex').slice(0,24);
 export function plain(s,max=500){return String(s||'').replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g,'$1').replace(/<[^>]*>/g,' ').replace(/&(?:nbsp|amp|lt|gt|quot|apos);/g,x=>({'&nbsp;':' ','&amp;':'&','&lt;':'<','&gt;':'>','&quot;':'"','&apos;':"'"}[x])).replace(/&#(x[\da-f]+|\d+);/gi,(_,n)=>{const c=n[0].toLowerCase()==='x'?parseInt(n.slice(1),16):+n;return c>0&&c<=0x10ffff?String.fromCodePoint(c):''}).replace(/\s+/g,' ').trim().slice(0,max)}
-export function canonical(raw){try{const u=new URL(raw);if(u.protocol!=='https:'||u.username||u.password||u.port||!u.hostname.includes('.')||/^(localhost|127\.|10\.|192\.168\.|169\.254\.)/.test(u.hostname))return null;u.hash='';for(const key of [...u.searchParams.keys()])if(/^(utm_|fbclid|gclid)/i.test(key))u.searchParams.delete(key);u.searchParams.sort();u.pathname=u.pathname.replace(/\/$/,'')||'/';return u.href}catch{return null}}
+export function canonical(raw,{preserveFragment=false}={}){try{const u=new URL(raw);if(u.protocol!=='https:'||u.username||u.password||u.port||!u.hostname.includes('.')||/^(localhost|127\.|10\.|192\.168\.|169\.254\.)/.test(u.hostname))return null;if(!preserveFragment||!/^#[a-zA-Z0-9_-]+$/.test(u.hash))u.hash='';for(const key of [...u.searchParams.keys()])if(/^(utm_|fbclid|gclid)/i.test(key))u.searchParams.delete(key);u.searchParams.sort();u.pathname=u.pathname.replace(/\/$/,'')||'/';return u.href}catch{return null}}
 export function iso(s){const t=Date.parse(s);return Number.isFinite(t)?new Date(t).toISOString():null}
 export function day(now){return new Date(+new Date(now)+8*3600000).toISOString().slice(0,10)}
 export function validDay(s){return /^\d{4}-\d{2}-\d{2}$/.test(s)&&iso(s+'T00:00:00Z')?.slice(0,10)===s}
@@ -16,11 +16,14 @@ export function classify(text,source={}){
  return {collection:'news',category:'AI 动态'};
 }
 export function normalizeArticle(raw,source,now){
- const url=canonical(raw.url),publishedAt=iso(raw.publishedAt),title=plain(raw.title,240),excerpt=plain(raw.excerpt,500);
+ const url=canonical(raw.url,{preserveFragment:!!source.preserveFragment}),publishedAt=iso(raw.publishedAt),title=plain(raw.title,240),excerpt=plain(raw.excerpt,raw.excerptKind==='abstract'?1800:500);
  if(!url||!title||!publishedAt||Date.parse(publishedAt)>+new Date(now)+300000)return null;
  const updatedAt=iso(raw.updatedAt);
  const safeUpdated=updatedAt&&updatedAt>=publishedAt&&Date.parse(updatedAt)<=+new Date(now)+300000?updatedAt:null;
- return {id:'event-'+hash(url),url,title,english:title,excerpt,publishedAt,publishedPrecision:raw.publishedPrecision||(/^\d{4}-\d{2}-\d{2}$/.test(raw.publishedAt)?'day':'instant'),sourceUpdatedAt:safeUpdated,eventOccurredAt:null,collectedAt:now,firstSeenAt:now,sourceId:source.id,source:source.name,evidence:excerpt?source.evidence:'title-only',...classify(title+' '+excerpt,source),fingerprint:hash(title+'\n'+excerpt),version:1};
+ const cover=source.format==='nature-cover'&&raw.coverConfirmed===true&&canonical(raw.coverEvidenceUrl);
+ const journal=source.format==='nature-cover'?new URL(source.url).pathname.split('/')[1]:null;
+ if(source.format==='nature-cover'&&(!cover||new URL(cover).origin!==new URL(source.url).origin||!['nature','neuro','natmachintell'].includes(journal)||!new RegExp('^/'+journal+'/volumes/\\d+/issues/\\d+$').test(new URL(cover).pathname)||!(iso(raw.issuePublishedAt)||(raw.issuePrecision==='month'&&/^\d{4}-(0[1-9]|1[0-2])$/.test(raw.issueMonth)&&raw.issueMonth<=now.slice(0,7)))))return null;
+ return {id:'event-'+hash(url),url,title,english:title,excerpt,publishedAt,publishedPrecision:raw.publishedPrecision||(/^\d{4}-\d{2}-\d{2}$/.test(raw.publishedAt)?'day':'instant'),sourceUpdatedAt:safeUpdated,eventOccurredAt:null,collectedAt:now,firstSeenAt:now,sourceId:source.id,source:source.name,evidence:excerpt?source.evidence:'title-only',...classify(title+' '+excerpt,source),...(cover?{contentKind:'journal-cover',category:'期刊封面',coverConfirmed:true,coverEvidenceUrl:cover,coverTitle:plain(raw.coverTitle,240),issuePublishedAt:iso(raw.issuePublishedAt),issueMonth:raw.issueMonth,issuePrecision:raw.issuePrecision||'day',articlePublishedAt:iso(raw.articlePublishedAt),excerptKind:raw.excerptKind||'cover-description',coverExcerpt:plain(raw.coverExcerpt||raw.excerpt,500),doi:plain(raw.doi,120)}:{}),fingerprint:hash(title+'\n'+excerpt+(cover?'\n'+cover:'')),version:1};
 }
 export function scoreRepo(repo,previous,now){
  const text=[repo.full_name,repo.description,...(repo.topics||[])].join(' ');

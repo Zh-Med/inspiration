@@ -6,6 +6,7 @@ const icon=n=>`<svg viewBox="0 0 24 24" aria-hidden="true">${icons[n]||icons.too
 const stories=[],tools=[];
 let contentStatus='loading',contentUpdatedAt=null,pendingContent=null;
 const issueMetadata={};
+let tldrIssue=null;
 const $=s=>document.querySelector(s);const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let persistence=true;function load(k,fallback){try{return JSON.parse(localStorage.getItem('inspiration:'+k))??fallback}catch{return fallback}}function save(k,v){try{localStorage.setItem('inspiration:'+k,JSON.stringify(v));return true}catch{persistence=false;toast('浏览器存储不可用，本次更改仅在当前页面保留');return false}}
 let bookmarks=load('bookmarks',[]),prefs=load('prefs',{theme:'system',large:false}),reading=load('reading',[]),active='today',filter='全部',query='',positions={},returnRoute='today',toastTimer;
@@ -49,7 +50,8 @@ document.addEventListener('news-date-selected',e=>{const date=e.detail?.date;if(
 const collections=[
  {id:'today',name:'News',keywords:'日报 新闻 Hardware People Models Interactions Apps 显卡 芯片 算力 行业人物 新模型 新交互 趣味应用',items:stories},
  {id:'tools',name:'Skills',keywords:'科研 工具 Workflows 工作流',items:tools},
- {id:'medicine',name:'Medicine',keywords:'AI 医学 Neuroscience Psychology 神经生物学 脑科学 心理学',items:[]}
+ {id:'medicine',name:'Medicine',keywords:'AI 医学 Neuroscience Psychology 神经生物学 脑科学 心理学',items:[]},
+ {id:'tldr',name:'TLDR',keywords:'English Technology Daily',items:[]}
 ].map(c=>({...c,updatedAt:null}));
 function collectionCards(){
  const matches=collections.filter(c=>(c.name+' '+(c.keywords||'')).toLowerCase().includes(query.trim().toLowerCase()));
@@ -58,7 +60,8 @@ function collectionCards(){
 function collectionOverview(){return `<section class="collection-overview" aria-label="收藏夹总览"><label class="search collection-search">${icon('search')}<input type="search" id="collection-search" placeholder="搜索" aria-label="搜索收藏夹" value="${esc(query)}"></label><div class="collection-grid" id="collection-results">${collectionCards()}</div></section>`}
 function emptyNewsMessage(date){const issue=issueMetadata[date];if(contentStatus==='loading')return '正在读取日报…';if(contentStatus==='unavailable')return '暂时无法连接内容服务，且本机没有缓存。';if(contentStatus==='not-collected')return '尚未完成首次采集。';if(issue?.status==='unavailable')return '本期来源采集失败，暂时无法生成日报。';if(issue?.status==='partial')return '部分来源采集失败，暂未收录有效条目。';if(issue?.status==='empty')return '本期覆盖时段内没有符合条件的新内容。';return '这一天尚未生成日报。'}
 function today(){
- const dateLabel=shelfKind==='today'?`<time class="news-date-label" datetime="${shelfDate}" aria-label="News ${shelfDate}">${shelfDate.slice(5).replace('-','/')}</time>`:'';
+ const dateLabel=shelfKind==='tldr'&&tldrIssue?`<time class="news-date-label" datetime="${tldrIssue.date}" aria-label="TLDR collection ${tldrIssue.date}">${tldrIssue.date.slice(5).replace('-','/')}</time>`:shelfKind==='today'?`<time class="news-date-label" datetime="${shelfDate}" aria-label="News ${shelfDate}">${shelfDate.slice(5).replace('-','/')}</time>`:'';
+ if(shelfKind==='tldr'&&!shelfContent.length)return `<section class="deck-page" aria-label="TLDR"><div class="news-empty"><h1>TLDR</h1><p>${contentStatus==='loading'?'Loading…':contentStatus==='unavailable'?'Unable to load. Connect and try again.':'No collected stories yet.'}</p>${safeLink('https://tldr.tech/','Open TLDR')}</div></section>`;
  if(shelfKind==='today'&&!shelfContent.length)return `<section class="deck-page" aria-label="News ${shelfDate}">${dateLabel}<div class="news-empty"><h1>News</h1><time datetime="${shelfDate}">${shelfDate.replaceAll('-','/')}</time><p>${esc(emptyNewsMessage(shelfDate))}</p><button type="button" data-calendar-open>选择日期</button></div></section>`;
  return `<section class="deck-page" style="view-transition-name:shelf-${shelfKind}" aria-label="${collections.find(c=>c.id===shelfKind)?.name||'News'}">${dateLabel}<div class="deck-stage tunnel" tabindex="0" aria-label="拖动浏览书架，左右方向键切换，点选金色纸面阅读">${deckCards.map((t,i)=>`<article class="paper${t.blank?' is-empty':''}" data-card="${i}" style="${paperMaterial(i)};--wave-order:${i}"><img class="paper-raster" src="${i<shelfContent.length?'paper-gold.webp':`paper-blank-${i-shelfContent.length+1}.webp`}" alt="" aria-hidden="true" decoding="async" draggable="false"><div class="paper-shadow"></div><div class="paper-face"><div class="paper-material"></div><div class="paper-shade"></div><div class="paper-light"></div><div class="paper-reflection"></div><div class="paper-breath"></div><div class="paper-edge"></div><button class="paper-select" data-deck="${i}" aria-label="${t.blank?'空白纸页，没有内容':esc(t.title||t.name)}">${t.blank?'':`<span class="paper-spine">${esc(t.name||t.english)}</span>`}</button></div></article>`).join('')}</div></section>`
 }
@@ -209,7 +212,7 @@ function animateDeck(time){
 function turnDeck(index){stopDeck();const next=Math.max(0,Math.min(deckCards.length-1,index));if(reduceMotion()){deckProgress=next;paintDeck();return}deckTarget=next;deckLastTime=performance.now();deckFrame=requestAnimationFrame(animateDeck);}
 function list(kind){const saved=kind==='saved';return intro(saved?'留下值得再看的。':'把好工具，用在对的地方。',saved?'收藏你的线索，让下一次查找更轻松。':'从文献到写作，每次只改进一个步骤。')+`<label class="search">${icon('search')}<input type="search" id="search" aria-label="${saved?'搜索收藏':'搜索工作流'}" placeholder="${saved?'搜索已收藏内容':'搜索任务或工作流'}" value="${esc(query)}"></label><div class="filters" aria-label="筛选">${(saved?['全部','新闻','工具']:['全部','文献','分析','写作']).map(x=>`<button data-filter="${x}" aria-pressed="${filter===x}">${x}</button>`).join('')}</div><div id="results">${results(kind)}</div>`}
 function results(kind){const match=t=>(t.title||t.name)+t.summary+t.english;const news=stories.filter(t=>bookmarks.includes(t.id)&&match(t).toLowerCase().includes(query.toLowerCase()));const ts=tools.filter(t=>(kind!=='saved'||bookmarks.includes(t.id))&&match(t).toLowerCase().includes(query.toLowerCase())&&(kind==='saved'||filter==='全部'||filter===t.category));let html=kind==='saved'?(filter!=='工具'?news.map(row).join(''):'')+(filter!=='新闻'?ts.map(toolRow).join(''):''):ts.map(toolRow).join('');return html||`<div class="empty">${icon(kind==='saved'?'bookmark':'search')}<h2>${query?'没有找到匹配内容':kind==='saved'?'好内容，留给下次。':'这个分类暂时没有内容'}</h2><p>${query?'换个关键词，再试一次。':'轻点文章或工具旁的收藏按钮，就能在这里找到。'}</p>${!query&&kind==='saved'?'<a class="primary" href="#today">去看看今日</a>':''}</div>`}
-const evidenceLabels={'official-claim':'官方主张 · 未独立验证','publisher-claim':'发布方主张','preprint':'预印本 · 未经同行评议','title-only':'仅标题 · 待核实','repository-metadata':'GitHub 元数据 · 未实测'};
+const evidenceLabels={'official-claim':'官方主张 · 未独立验证','publisher-claim':'发布方主张','publisher-curated':'官方封面关联 · 研究类型待核对','media-report':'媒体报道 · 非独立核实','author-commentary':'作者实践与观点','community-observation':'社区讨论 · 未经核实','preprint':'预印本 · 未经同行评议','title-only':'仅标题 · 待核实','repository-metadata':'GitHub 元数据 · 未实测'};
 function safeLink(url,label,showIcon=true){try{const u=new URL(url);if(u.protocol!=='https:'||u.username||u.password)return '';return `<a href="${esc(u.href)}" target="_blank" rel="noopener noreferrer">${esc(label)}${showIcon?' '+icon('external'):''}</a>`}catch{return ''}}
 function dateText(value){return value?new Intl.DateTimeFormat('zh-CN',{timeZone:'Asia/Shanghai',dateStyle:'medium',timeStyle:'short'}).format(new Date(value)):'未提供'}
 function newsDateText(value){return value&&Number.isFinite(Date.parse(value))?NewsDates.today(new Date(value)):'未提供日期'}
@@ -226,7 +229,8 @@ function detail(id,isTool){
  const t=(isTool?tools:stories).find(x=>x.id===id);
  if(!t)return intro('这条内容尚未载入。','联网后可重新打开；离线时仅保留已缓存与收藏的内容。')+'<a class="primary" href="#today">返回今日</a>';
  if(!reading.includes(id)){reading.push(id);save('reading',reading)}
- if(!isTool)return `<article class="article news-article"><h1>${esc(t.title)}</h1><div class="news-byline"><span class="news-source">${safeLink(t.url,t.source,false)||esc(t.source)}</span><time datetime="${esc(t.publishedAt||'')}">${esc(newsDateText(t.publishedAt))}</time></div><section class="news-summary" aria-label="摘要"><h2>摘要</h2><p>${esc(t.summary||'来源暂未提供摘要。')}</p></section></article>`;
+ if(t.collection==='tldr')return `<article class="article news-article" lang="en"><h1>${esc(t.title)}</h1><div class="news-byline"><span class="news-source">${safeLink(t.url,'TLDR',false)}</span><time datetime="${esc(t.collectedAt)}">Collected ${esc(t.selectionDate)}</time></div><section class="news-summary" aria-label="Original excerpt"><h2>Original excerpt</h2><p>${esc(t.summary||'Open TLDR to read this story.')}${t.excerptTruncated&&t.summary?'…':''}</p><p>${safeLink(t.url,'Read on TLDR')} · ${safeLink(t.originalUrl,'Original article')}</p></section></article>`;
+ if(!isTool)return `<article class="article news-article"><h1>${esc(t.title)}</h1><div class="news-byline"><span class="news-source">${safeLink(t.url,t.source,false)||esc(t.source)}</span><time datetime="${esc((t.coverConfirmed?t.articlePublishedAt:t.publishedAt)||'')}">${t.coverConfirmed?'论文发表于 ':''}${esc(newsDateText(t.coverConfirmed?t.articlePublishedAt:t.publishedAt))}</time>${t.coverConfirmed?`<span>${safeLink(t.coverEvidenceUrl,'封面 · '+(t.issueMonth||newsDateText(t.issuePublishedAt)),false)}</span>`:''}</div><section class="news-summary" aria-label="摘要"><h2>来源摘录</h2><p>${esc(t.summary||'来源暂未提供摘要。')}</p></section></article>`;
  const repo=t.fullName||t.name||t.english;
  const title=t.title||repo.split('/').pop();
  const updated=t.pushedAt||t.publishedAt;
@@ -238,13 +242,15 @@ function detail(id,isTool){
 function applyContent(data){
  contentStatus=data.status;contentUpdatedAt=data.updatedAt;
  const saved=Content.saved;
- stories.splice(0,stories.length,...data.stories,...saved.filter(x=>x.collection!=='tools'&&!data.stories.some(s=>s.id===x.id)));
+ stories.splice(0,stories.length,...data.stories,...Object.values(data.tldrIssues||{}).flatMap(i=>i.items),...saved.filter(x=>x.collection!=='tools'&&!data.stories.some(s=>s.id===x.id)&&!Object.values(data.tldrIssues||{}).some(i=>i.items.some(s=>s.id===x.id))));
  tools.splice(0,tools.length,...data.tools,...saved.filter(x=>x.collection==='tools'&&!data.tools.some(t=>t.id===x.id)));
  for(const key of Object.keys(newsByDate))delete newsByDate[key];
  for(const key of Object.keys(issueMetadata))delete issueMetadata[key];
  for(const [date,issue] of Object.entries(data.digests)){issueMetadata[date]=issue;newsByDate[date]=issue.items.map(i=>stories.find(s=>s.id===i.eventId)).filter(Boolean)}
- collections[0].items=stories;collections[1].items=tools;collections[2].items=stories.filter(s=>s.collection==='medicine');
- for(const c of collections)c.updatedAt=c.items.length?data.updatedAt:null;
+ tldrIssue=Object.values(data.tldrIssues||{}).sort((a,b)=>b.date.localeCompare(a.date))[0]||null;
+ collections[3].items=tldrIssue?.items||[];
+ collections[0].items=stories.filter(s=>s.collection!=='tldr');collections[1].items=tools;collections[2].items=stories.filter(s=>s.collection==='medicine');
+ for(const c of collections)c.updatedAt=c.items.length?(c.id==='tldr'?tldrIssue?.updatedAt:data.updatedAt):null;
 }
 applyContent(Content.snapshot);
 document.addEventListener('content-storage-warning',()=>toast('本机存储空间不足，部分内容未能离线保存；请导出重要收藏'));

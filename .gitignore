@@ -30,12 +30,14 @@
 !/scripts/bake-paper-materials.cjs
 !/scripts/parse-feed.py
 !/scripts/parse-newsroom.py
+!/scripts/parse-source-page.py
 /tests/*
 !/tests/*.test.mjs
 /docs/*
 !/docs/DEPLOYMENT.md
 !/docs/BACKEND.md
 !/docs/NEWS-COVERAGE.md
+!/docs/NEWS-SOURCES.md
 !/docs/PERFORMANCE.md
 /.github/*
 !/.github/workflows/
@@ -51,3 +53,9 @@
 **/node_modules/
 **/__pycache__/
 **/.DS_Store
+
+# Unfinished summary API work stays local.
+/cloudflare/
+/app/summary-client.js
+/tests/summary-client.test.mjs
+/docs/DEEPSEEK.md

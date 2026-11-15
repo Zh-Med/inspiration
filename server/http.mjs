@@ -1,7 +1,7 @@
 import {limits} from './config.mjs';
 const wait=ms=>new Promise(r=>setTimeout(r,ms));
 export function createFetcher({fetchImpl=fetch,sleep=wait}={}){
- return async function request(url,{etag,lastModified,maxBytes=limits.requestBytes}={}){
+ return async function request(url,{etag,lastModified,maxBytes=limits.requestBytes,publicNatureRedirects=false}={}){
   const original=new URL(url);if(original.protocol!=='https:')throw Error('HTTPS source required');
   for(let attempt=0;attempt<3;attempt++){
    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),limits.timeoutMs);
@@ -9,13 +9,24 @@ export function createFetcher({fetchImpl=fetch,sleep=wait}={}){
     const headers={'User-Agent':'Inspiration/0.3 (personal read-only research radar)','Accept':original.hostname==='api.github.com'?'application/vnd.github+json':'application/atom+xml, application/rss+xml, application/xml, text/xml, text/html'};
     if(etag)headers['If-None-Match']=etag;if(lastModified)headers['If-Modified-Since']=lastModified;
     if(original.hostname==='api.github.com'){headers['X-GitHub-Api-Version']='2022-11-28';if(process.env.GITHUB_TOKEN)headers.Authorization=`Bearer ${process.env.GITHUB_TOKEN}`}
-    // Only same-host HTTPS redirects; never forward credentials to another origin.
+    // Nature uses a public, cookieless redirect handshake even for issue metadata.
+    // Permit only its cookie-only routes, with a return URL in the same journal.
+    // No cookies or authentication headers are stored, sent or forwarded.
+    const natureCookieHop=next=>{
+     const journal=original.pathname.split('/')[1];
+     const article=/^\/articles\/[a-zA-Z0-9.-]+$/.test(original.pathname);
+     if(!publicNatureRedirects||original.origin!=='https://www.nature.com'||(!['nature','neuro','natmachintell'].includes(journal)&&!article)||next.origin!=='https://idp.nature.com'||!['/authorize','/transit'].includes(next.pathname))return false;
+     if(next.pathname==='/authorize'&&(next.searchParams.get('response_type')!=='cookie'||next.searchParams.get('client_id')!=='grover'))return false;
+     try{const back=new URL(next.searchParams.get('redirect_uri'));return !next.username&&!next.password&&back.origin===original.origin&&(article?back.pathname===original.pathname:back.pathname.startsWith('/'+journal+'/'))&&!back.username&&!back.password}catch{return false}
+    };
     let current=url,response;
-    for(let hops=0;hops<4;hops++){
+    const maxHops=publicNatureRedirects?10:4;
+    for(let hops=0;hops<maxHops;hops++){
      response=await fetchImpl(current,{headers,signal:controller.signal,redirect:'manual'});
      if(![301,302,303,307,308].includes(response.status))break;
      await response.body?.cancel();const next=new URL(response.headers.get('location'),current);
-     if(next.origin!==original.origin)throw Error('Cross-origin redirect needs source configuration review');current=next.href;
+     if(next.username||next.password||(next.origin!==original.origin&&!natureCookieHop(next)))throw Error('Cross-origin redirect needs source configuration review');
+     if(hops===maxHops-1)throw Error('Too many source redirects');current=next.href;
     }
     const meta={etag:response.headers.get('etag'),lastModified:response.headers.get('last-modified')};
     if(response.status===304)return {notModified:true,...meta};
