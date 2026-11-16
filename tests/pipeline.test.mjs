@@ -62,7 +62,7 @@ test('pipeline persists, replays, isolates failed sources and exposes read-only 
   const args={dir,request,now,feedConfig:[{...source,url:'https://example.com/feed'},{...source,id:'broken',url:'https://example.com/broken'}],searchConfig:[{id:'test',query:'research'}],enrich:false};
   const run=await collect(args);assert.equal(run.newEvents,1);assert.equal(run.failures.length,1);
   const before=await readState(dir);await collect(args);const state=await readState(dir);assert.equal(Object.keys(state.events).length,1);assert.equal(Object.keys(state.tools).length,1);assert.equal(state.digests['2026-11-13'].revision,before.digests['2026-11-13'].revision);
-  const content=contentView(state);assert.equal(content.stories.length,1);assert.equal(content.tools[0].verification,'未实测');assert.ok(!('baseline' in content.tools[0]));
+  const content=contentView(state,now);assert.equal(content.stories.length,1);assert.equal(content.tools[0].verification,'未实测');assert.ok(!('baseline' in content.tools[0]));
   const api=createApi({dir});let status,body;const res={writeHead(s){status=s},end(b){body=JSON.parse(b)}};
   await api({method:'POST'},res,new URL('http://localhost/api/content'));assert.equal(status,405);
   await api({method:'GET'},res,new URL('http://localhost/api/digests/2026-02-30'));assert.equal(status,400);
