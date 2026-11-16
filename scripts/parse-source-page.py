@@ -217,7 +217,7 @@ def tldr_home(root, base):
             rows.setdefault(story_url, dict(title=title, url=story_url, originalUrl=article_url))
     if not rows:
         raise ValueError('TLDR story cards missing; review source format')
-    return list(rows.values())[:10]
+    return list(rows.values())
 
 
 def tldr_story(root, base):

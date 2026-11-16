@@ -31,7 +31,7 @@ npm test
 
 ## 内容质量
 
-TLDR 独立书架：北京时间 08:00 后首次运行固定首页前 10 篇（排除广告、保留顺序），当天重试仅补失败详情或旧版不完整摘录。展示英文原标题、发布方完整短摘录和 TLDR／原站两个入口，点击纸页进入应用内阅读页。不调用 DeepSeek、不翻译、不混入 News 排序。服务端保留 30 个采集批次，阅读缓存保留 3 批；采集日不冒充新闻发布日期。定时任务需发布后才生效；系统 Web Push 未实现。
+TLDR 独立书架：北京时间 08:00 后按首页顺序扫描，跳过广告和往期已收录的 TLDR 链接或原文链接，向下补足最多 10 篇。新规则首次运行会重算当天旧版，当天后续重试仅补失败详情或旧版不完整摘录。展示英文原标题、发布方完整短摘录和 TLDR／原站两个入口，点击纸页进入应用内阅读页。不调用 DeepSeek、不翻译、不混入 News 排序。服务端保留 30 个采集批次，并单独保留已收录链接索引，阅读缓存保留 3 批；采集日不冒充新闻发布日期。定时任务需发布后才生效；系统 Web Push 未实现。
 
 21 个新闻／期刊来源，另有 GitHub Trending 工具发现入口。保留既有官方源，新增 The Decoder、Ars Technica AI、MIT Technology Review AI、TechCrunch AI、Simon Willison，以及 Nature Neuroscience／Machine Intelligence 的明确封面关联和公开 Abstract。月刊封面进入 Medicine，保留封面月份与论文原始日期，不冒充当天新论文。GitHub Trending 只发现候选，再核对公开仓库元数据，不安装或执行。
 

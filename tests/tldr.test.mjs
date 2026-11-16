@@ -18,7 +18,7 @@ const now='2026-11-15T01:00:00.000Z';
 
 test('TLDR selects first ten unique non-sponsored cards and preserves the complete publisher summary',async()=>{
  const list=await parseFeed(row(99,'kf-ad')+row(1)+home,'tldr-home',tldrSource.url);
- assert.deepEqual(list.map(r=>r.title),Array.from({length:10},(_,i)=>'Story '+(i+1)));
+ assert.deepEqual(list.map(r=>r.title),Array.from({length:13},(_,i)=>'Story '+(i+1)));
  const [story]=await parseFeed(detail(1),'tldr-story',list[0].url);
  assert.equal(story.excerpt,Array.from({length:60},(_,j)=>'word'+j).join(' '));
  assert.equal(story.excerptTruncated,false);assert.ok(!story.excerpt.includes('comments'));
@@ -48,13 +48,21 @@ test('daily retries preserve ordering, fill failures, refresh at Beijing 08:00, 
   assert.equal(state.tldrIssues['2026-11-15'].items[6].summary,Array.from({length:60},(_,j)=>'word'+j).join(' '));
   assert.equal(state.tldrIssues['2026-11-15'].items[6].excerptTruncated,false);
   calls=[];await collect({...args,now:'2026-11-15T23:59:59.000Z'});assert.equal(calls.length,0);
-  await collect({...args,now:'2026-11-16T00:00:00.000Z'});assert.equal(calls.length,11);
+  const nextDate='2026-11-16';
+  const legacyItems=state.tldrIssues['2026-11-15'].items.slice(0,2);
+  state.tldrIssues[nextDate]={date:nextDate,status:'ready',candidates:legacyItems,items:legacyItems};
+  delete state.tldrHistory;
+  await writeState(state,dir);
+  const alternate=row(14).replace('https://example.org/14','https://example.org/1?utm_source=tldr');
+  const nextRequest=(url,options)=>url===tldrSource.url?request(url,options).then(()=>({body:alternate+home})):request(url,options);
+  await collect({...args,request:nextRequest,now:'2026-11-16T00:00:00.000Z'});assert.equal(calls.length,4);
   state=await readState(dir);assert.equal(Object.keys(state.tldrIssues).length,2);assert.equal(Object.keys(state.events).length,0);assert.equal(Object.keys(state.digests).length,0);
-  const view=contentView(state);assert.equal(view.stories.length,0);assert.equal(view.tldrIssues['2026-11-16'].items.length,10);
+  const view=contentView(state);assert.equal(view.stories.length,0);
+  assert.deepEqual(view.tldrIssues[nextDate].items.map(item=>item.title),['Story 11','Story 12','Story 13']);
   await buildPages({dir,out:join(dir,'dist')});
   const item=state.tldrIssues['2026-11-16'].items[0];
   assert.equal(JSON.parse(await readFile(join(dir,'dist/data/items/'+item.id+'.json'))).summary,item.summary);
-  assert.equal(JSON.parse(await readFile(join(dir,'dist/data/content.json'))).tldrIssues['2026-11-16'].items.length,10);
+  assert.equal(JSON.parse(await readFile(join(dir,'dist/data/content.json'))).tldrIssues[nextDate].items.length,3);
  }finally{await rm(dir,{recursive:true,force:true})}
 });
 
