@@ -4,8 +4,8 @@ on:
     branches: [main]
   workflow_dispatch:
   schedule:
-    # UTC: hourly refresh; 00:07 is 08:07 Asia/Shanghai, avoiding the busy hour boundary.
-    - cron: '17 * * * *'
+    # UTC: morning run plus two recovery opportunities per hour.
+    - cron: '17,47 * * * *'
     - cron: '7 0 * * *'
 permissions:
   contents: read
@@ -37,16 +37,15 @@ jobs:
             git show FETCH_HEAD:state.json > data/state.json
             git update-ref refs/remotes/origin/content-state FETCH_HEAD
           fi
-      - name: Collect public news (no LLM)
+      - name: Collect public news with daily catch-up (no LLM)
         env:
           GITHUB_TOKEN: ${{ github.token }}
           EVENT: ${{ github.event_name }}
-          SCHEDULE: ${{ github.event.schedule }}
         shell: bash
         run: |
           set +e
-          if [ "$EVENT" = schedule ] && [ "$SCHEDULE" = '17 * * * *' ]; then
-            node scripts/collect.mjs --news-only
+          if [ "$EVENT" = schedule ]; then
+            node scripts/collect.mjs --scheduled
           else
             node scripts/collect.mjs
           fi
@@ -58,6 +57,8 @@ jobs:
             exit "$result"
           fi
       - run: npm run build
+      - name: Verify current issue before publication
+        run: node scripts/verify-publication.mjs --local
       - name: Persist public history on a separate branch
         shell: bash
         run: |
@@ -74,6 +75,11 @@ jobs:
       - uses: actions/upload-pages-artifact@v4
         with:
           path: dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: publication-expectation
+          path: dist/build-info.json
+          retention-days: 2
       - name: Write run summary
         run: |
           echo '### Published build candidate' >> "$GITHUB_STEP_SUMMARY"
@@ -83,6 +89,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
+      contents: read
+      actions: read
       pages: write
       id-token: write
     environment:
@@ -93,3 +101,15 @@ jobs:
       - name: Deploy
         id: deployment
         uses: actions/deploy-pages@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/download-artifact@v4
+        with:
+          name: publication-expectation
+          path: publication-expectation
+      - name: Verify live current issue
+        env:
+          SITE_URL: ${{ steps.deployment.outputs.page_url }}
+        run: node scripts/verify-publication.mjs --url "$SITE_URL" --expected publication-expectation/build-info.json

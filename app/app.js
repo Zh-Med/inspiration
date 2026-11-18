@@ -4,7 +4,7 @@ const breathTexture=new Image();breathTexture.src='paper-breath.webp';breathText
 const icon=n=>`<svg viewBox="0 0 24 24" aria-hidden="true">${icons[n]||icons.tools}</svg>`;
 // Live source records; the empty state never falls back to fictional news.
 const stories=[],tools=[];
-let contentStatus='loading',contentUpdatedAt=null,pendingContent=null;
+let contentStatus='loading',contentUpdatedAt=null,pendingContent=null,pendingResumeRefresh=false,contentRefreshTimer=0;
 const issueMetadata={};
 let tldrIssue=null;
 const $=s=>document.querySelector(s);const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -254,12 +254,24 @@ function applyContent(data){
 }
 applyContent(Content.snapshot);
 document.addEventListener('content-storage-warning',()=>toast('本机存储空间不足，部分内容未能离线保存；请导出重要收藏'));
+function contentRefreshBusy(){return newsLaunch||routeTransition||deckDrag||deckFrame||deckWheelTimer}
+function flushResumedContent(){
+ clearTimeout(contentRefreshTimer);contentRefreshTimer=0;
+ if(!pendingContent||!pendingResumeRefresh||document.hidden||$('.article'))return;
+ if(contentRefreshBusy()){contentRefreshTimer=setTimeout(flushResumedContent,200);return}
+ const data=pendingContent;pendingContent=null;pendingResumeRefresh=false;applyContent(data);render(true);
+}
 document.addEventListener('content-update',e=>{
- const data=e.detail;
- if(newsLaunch||deckDrag||deckFrame||deckWheelTimer||(location.hash!=='#collections'&&(shelfKindForRoute(location.hash.slice(1)||'today')?shelfContent.length:!!$('.article')))){pendingContent=data;return}
- applyContent(data);render(true);
+ const data=e.detail,resumed=e.refreshReason==='resume';
+ const route=location.hash.slice(1)||'today';
+ if(resumed&&data.updatedAt===contentUpdatedAt&&data.status===contentStatus&&!(route==='today'&&shelfDate!==NewsDates.today()))return;
+ if(contentRefreshBusy()||$('.article')||(!resumed&&route!=='collections'&&shelfKindForRoute(route)&&shelfContent.length)){
+  pendingContent=data;pendingResumeRefresh=pendingResumeRefresh||resumed;
+  if(pendingResumeRefresh)flushResumedContent();return;
+ }
+ pendingContent=null;pendingResumeRefresh=false;applyContent(data);render(true);
 });
-function renderContent(restore=false){freezeDeck();resetDeckPaintCache();if(pendingContent&&!deckDrag){applyContent(pendingContent);pendingContent=null}const route=location.hash.slice(1)||'today';Content.ensure(route);const parts=route.split('/');const kind=shelfKindForRoute(route),isShelf=!!kind;document.documentElement.classList.toggle('navigation-locked',isShelf||route==='collections');document.body.classList.toggle('deck-view',isShelf);document.body.classList.toggle('collections-view',route==='collections');document.body.classList.toggle('news-reading',['story','tool'].includes(parts[0]));if(isShelf){selectShelf(kind,NewsDates.route(route));returnRoute=route}const nav=$('#navigation-button');nav.hidden=route==='collections';nav.innerHTML=icon('back');nav.setAttribute('aria-label',isShelf?'返回收藏夹总览':'返回书架');nav.title=nav.getAttribute('aria-label');$('.brand').textContent='Inspiration';active=['today','tools','saved'].includes(parts[0])?parts[0]:active;$('#main').innerHTML=parts[0]==='news'&&!isShelf?intro('Invalid date','请选择一个有效日期。')+'<button type="button" data-calendar-open>选择日期</button>':parts[0]==='story'?detail(parts[1],false):parts[0]==='tool'?detail(parts[1],true):route==='collections'?collectionOverview():isShelf?today():list(active);$('#main').classList.remove('page-enter');void $('#main').offsetWidth;if(!document.body.classList.contains('collection-transition-active'))$('#main').classList.add('page-enter');if(isShelf)paintDeck();else stopDeck();if(!navigator.onLine&&!isShelf)$('#main').insertAdjacentHTML('afterbegin','<div class="offline" role="status">当前离线 · 正在阅读已缓存内容</div>');requestAnimationFrame(()=>{window.scrollTo(0,restore?positions[route]||0:0);if(parts.length>1)$('#main').focus({preventScroll:true})});}
+function renderContent(restore=false){freezeDeck();resetDeckPaintCache();if(pendingContent&&!deckDrag){applyContent(pendingContent);pendingContent=null;pendingResumeRefresh=false}const route=location.hash.slice(1)||'today';Content.ensure(route);const parts=route.split('/');const kind=shelfKindForRoute(route),isShelf=!!kind;document.documentElement.classList.toggle('navigation-locked',isShelf||route==='collections');document.body.classList.toggle('deck-view',isShelf);document.body.classList.toggle('collections-view',route==='collections');document.body.classList.toggle('news-reading',['story','tool'].includes(parts[0]));if(isShelf){selectShelf(kind,NewsDates.route(route));returnRoute=route}const nav=$('#navigation-button');nav.hidden=route==='collections';nav.innerHTML=icon('back');nav.setAttribute('aria-label',isShelf?'返回收藏夹总览':'返回书架');nav.title=nav.getAttribute('aria-label');$('.brand').textContent='Inspiration';active=['today','tools','saved'].includes(parts[0])?parts[0]:active;$('#main').innerHTML=parts[0]==='news'&&!isShelf?intro('Invalid date','请选择一个有效日期。')+'<button type="button" data-calendar-open>选择日期</button>':parts[0]==='story'?detail(parts[1],false):parts[0]==='tool'?detail(parts[1],true):route==='collections'?collectionOverview():isShelf?today():list(active);$('#main').classList.remove('page-enter');void $('#main').offsetWidth;if(!document.body.classList.contains('collection-transition-active'))$('#main').classList.add('page-enter');if(isShelf)paintDeck();else stopDeck();if(!navigator.onLine&&!isShelf)$('#main').insertAdjacentHTML('afterbegin','<div class="offline" role="status">当前离线 · 正在阅读已缓存内容</div>');requestAnimationFrame(()=>{window.scrollTo(0,restore?positions[route]||0:0);if(parts.length>1)$('#main').focus({preventScroll:true})});}
 let renderedRoute=null,routeTransition=null,newsLaunch=null;
 function cancelNewsLaunch(){newsLaunch?.motion.finish()}
 function render(restore=false){

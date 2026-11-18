@@ -1,6 +1,6 @@
 # GitHub 与 iPhone 安装
 
-核查日期：2026-11-14。目标仓库：<https://github.com/Zh-Med/inspiration>。本方案为公开仓库＋GitHub 托管 Actions＋GitHub Pages，无付费服务、无 LLM、无 Mac 常驻进程。
+核查日期：2026-11-18。目标仓库：<https://github.com/Zh-Med/inspiration>。本方案为公开仓库＋GitHub 托管 Actions＋GitHub Pages，无付费服务、无 LLM、无 Mac 常驻进程。
 
 ## 首次发布
 
@@ -26,9 +26,11 @@
 
 ## 自动更新与运行
 
-- UTC `17 * * * *`：每小时第17分钟只采新闻。
-- UTC `7 0 * * *`：北京时间08:07采集新闻与科研项目；日报覆盖 `[前一天08:00, 当天08:00)`。
-- push 到 main 或手动触发：完整采集并发布。
+- UTC `17,47 * * * *`：每小时第17、47分钟尝试更新；当天尚未完成完整采集时自动补跑晨报与科研项目，否则只采新闻。
+- UTC `7 0 * * *`：北京时间08:07晨报入口；日报覆盖 `[前一天08:00, 当天08:00)`。判断依据是实际运行时的北京时间业务日，不依赖恰好收到这条cron。
+- push 到 main 或手动触发：完整采集并发布。记录最近完整采集业务日，避免运行历史轮换后反复执行科研项目采集。
+- 构建后检查当前业务日的News覆盖区间、来源可用性和TLDR批次；缺期时失败，不将旧内容当成更新成功。无新闻时允许明确的空日报。发布后再次读取线上内容与独立日报，核对本次采集时间和指纹。
+- 手机恢复前台、返回缓存页面和重新聚焦时重新拉取，30秒内合并重复事件；前台持续打开每5分钟检查。离线保留原缓存与收藏。恢复时的新书架等拖动／转场结束后更新，阅读中的文章等离开后应用新数据。
 - 采集失败不清空旧状态；部分来源失败仍发布，健康记录明确 partial。完全没有可读内容则拒绝替换站点。
 - 工作流串行执行，避免状态写入冲突。首次运行从公开来源重新采集，不依赖 Mac 本机数据。
 - 新增前端文件需同步构建白名单与 Service Worker 外壳列表。内容更新不会每次重装外壳；外壳变更自动变更缓存版本。
@@ -49,3 +51,11 @@ GitHub 官方说明：定时任务可能延迟或丢弃，公开仓库60天无�
 GitHub Free 的 Pages 支持公开仓库，本方案使用公开仓库、免费域名和标准 GitHub 托管 runner；不启用付费套餐、付费搜索或 LLM。费用规则以账号实际页面为准，发现超额需停用，不自动购买。[Pages 官方说明](https://docs.github.com/en/pages/getting-started-with-github-pages/what-is-github-pages)
 
 工作流部署要求和环境配置依据 [GitHub Pages 自定义工作流](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages)。iOS 主屏幕 Web App、独立窗口和推送能力依据 [WebKit 官方说明](https://webkit.org/blog/13878/web-push-for-web-apps-on-ios-and-ipados/)。这里只完成阅读站配置，不能用平台支持推送替代项目实际实现。
+
+## 2026-11-18 漏更调查
+
+截至北京时间09:40，工作流active，main为默认分支，仓库未归档／禁用且当天有活动；已排除60天无活动停用、时区换算错误和当天构建失败。公开Actions记录中，08:00后没有新运行；最后成功发布为06:24，内容仍为11月17日，11月18日日报URL返回404。11月16、17日UTC日各只出现4次schedule运行，明显少于配置的每小时更新加晨报。
+
+可确定故障发生在定时事件触发阶段；公开API不提供未生成run的事件日志，无法证明这一次究竟被延迟还是被丢弃。GitHub官方明确说明高负载时schedule可能延迟或丢弃。官方状态页未列出与本时段对应的Actions事故，不能据此推断没有局部调度问题。依据：[运行记录](https://github.com/Zh-Med/inspiration/actions)、[GitHub schedule限制](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule)、[官方状态](https://www.githubstatus.com/)。
+
+本轮增加半小时补偿机会、任何定时入口按实际业务日补采、发布前后验证；这些机制减少漏更与假成功，但仍共用GitHub调度，不能保证08:00准时或平台完全停调时自动恢复。真正独立的兜底需另行配置外部调度服务，本轮未注册新服务、未设置Mac常驻任务、未读取API Key。系统Web Push仍暂缓。

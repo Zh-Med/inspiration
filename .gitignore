@@ -59,3 +59,5 @@
 /app/summary-client.js
 /tests/summary-client.test.mjs
 /docs/DEEPSEEK.md
+
+!/scripts/verify-publication.mjs

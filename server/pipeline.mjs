@@ -45,9 +45,9 @@ export function buildDigest(state,date,now,feedConfig=feeds){
  const digest={date,timeZone:'Asia/Shanghai',coverage,items:selected,status,sourceHealth:{healthy:ok,total:feedConfig.length},updatedAt:previous?.fingerprint===fingerprint?previous.updatedAt:now,fingerprint,revision:(previous?.revision||0)+(previous?.fingerprint===fingerprint?0:1)};
  state.digests[date]=digest;return digest;
 }
-export async function collect({dir=dataDir,request=createFetcher(),now=new Date().toISOString(),feedConfig=feeds,searchConfig=searches,projectConfig=searchConfig===searches?projectSources:[],enrich=true,tldrConfig=feedConfig===feeds?tldrSource:null}={}){
+export async function collect({dir=dataDir,request=createFetcher(),now=new Date().toISOString(),feedConfig=feeds,searchConfig=searches,projectConfig=searchConfig===searches?projectSources:[],enrich=true,tldrConfig=feedConfig===feeds?tldrSource:null,scope='full'}={}){
  return withLock(async()=>{
- const state=await readState(dir);const run={id:hash(now),startedAt:now,feeds:0,repositories:0,newEvents:0,sourceCounts:{},failures:[]};
+ const state=await readState(dir);const run={id:hash(now),scope,businessDate:latestDue(now),startedAt:now,feeds:0,repositories:0,newEvents:0,sourceCounts:{},failures:[]};
  async function source(id,url,consume,options={}){
   const prev=state.sources[id]||{};
   if(url.startsWith('https://api.github.com/')&&state.githubRetryAt>now){run.failures.push({source:id,error:'GitHub rate-limit cooldown'});return}
@@ -122,7 +122,7 @@ export async function collect({dir=dataDir,request=createFetcher(),now=new Date(
  for(const e of Object.values(state.events)){if(e.issuePrecision==='month')continue;const d=day(new Date(Date.parse(e.publishedAt)+16*3600000));if(windowFor(d).end<=now)dates.add(d)}
  for(const date of feedConfig.length?[...dates].sort():[])buildDigest(state,date,now,feedConfig);
  selectEditions(state,now);
- run.finishedAt=new Date().toISOString();state.runs=[run,...state.runs].slice(0,30);state.updatedAt=now;
+ run.finishedAt=new Date().toISOString();if(scope==='full')state.lastFullCollection={businessDate:latestDue(now),finishedAt:run.finishedAt};state.runs=[run,...state.runs].slice(0,30);state.updatedAt=now;
  await writeState(state,dir);return run;
  },dir);
 }
