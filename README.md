@@ -1,55 +1,50 @@
 # Inspiration
 
-iPhone 优先的 AI 晨报与科研工具雷达。保留英文原始标题与出处，约 5 分钟阅读重要进展，发现可采用的科研工作流。
+为 iPhone 设计的 AI 晨报与科研工具雷达。每天花约 5 分钟浏览重要进展，保留英文标题、来源和原文入口。
 
-当前界面：News／Skills／Medicine／TLDR 四个玻璃方格、星空背景、香槟金纸张书架、连续拖动与返回转场。当前 v66 已通过用户手机测试并获授权上传：总览单行四个液态玻璃风格入口，任意内容纸页可直接进入详情，增加每日与每周推荐限额。
+| 栏目 | 内容 |
+| --- | --- |
+| News | AI 模型、芯片与算力、行业人物、新交互和应用。北京时间 08:00 划分日报，每期最多 5 条。 |
+| Skills | 从公开 GitHub 仓库发现可用于科研的工具和工作流。 |
+| Medicine | 医学 AI、脑科学等科研内容，保留论文日期和证据出处。 |
+| TLDR | 按发布方首页顺序筛选，每日最多 10 条英文摘录，附 TLDR 和原站入口。 |
 
-## 运行
+[打开 Inspiration](https://zh-med.github.io/inspiration/) · [iPhone 安装、自动更新与排错](docs/DEPLOYMENT.md)
 
-Node.js 22+、Python 3；没有 npm 依赖，无须 `npm install`。
+GitHub Pages 提供阅读与主屏幕安装。应用支持有限的离线阅读，收藏保存在当前设备。系统 Web Push 尚未实现。
+
+## 实际运行演示
+
+![Inspiration 从总览进入 TLDR 书架，拖动纸页并打开文章](docs/demo.gif)
+
+本地运行录制，使用 390 × 844 的移动端视口和已采集的 TLDR 内容。
+
+## 在 Mac 上运行
+
+需要 Node.js 22+ 和 Python 3。项目没有 npm 运行依赖，可直接打开本机服务。
 
 ```sh
-npm start                       # 本机 http://localhost:4173
-npm run collect                 # 公开新闻 + GitHub 项目采集
-npm run collect -- --news-only  # 更新新闻与当日 TLDR
-npm run collect -- --tldr-only  # 仅更新当日 TLDR
-npm run build                   # 生成 dist/ 静态 PWA，要求已有采集内容
-npm run preview:phone           # 同 Wi-Fi 手机预览，仅提供 dist；Ctrl-C 停止
-npm run check
-npm test
+npm start  # http://localhost:4173
 ```
 
-`collect` 的退出码：0 全部成功；2 部分来源失败，成功内容仍保存；1 任务失败。采集与构建不需要 API Key，也不进行付费模型调用。摘要 API 尚未完成测试，本次同步不包含摘要服务接入、配置和测试代码。
+| 操作 | 命令 |
+| --- | --- |
+| 采集公开内容到本地 | `npm run collect` |
+| 只刷新新闻和当日 TLDR | `npm run collect -- --news-only` |
+| 只刷新当日 TLDR | `npm run collect -- --tldr-only` |
+| 用已有采集内容生成静态站点 `dist/` | `npm run build` |
+| 在同一 Wi-Fi 下用 iPhone 预览 `dist/` | `npm run preview:phone` |
+| 检查语法与运行测试 | `npm run check`、`npm test` |
 
-## GitHub 与 iPhone
+采集退出码 `2` 表示部分来源失败，已成功取得的内容仍会保存。`1` 表示任务失败。采集、构建与 GitHub Pages 发布流程均无需 DeepSeek 密钥。正式发布基线及本地摘要集成的状态见相应运行文档。
 
-已提供 GitHub Actions 工作流：每小时第17、47分钟尝试更新，每天北京时间 08:07 触发晨报；任意后续定时入口会按实际业务日补齐未完成的晨报及工具更新，生成静态阅读数据并部署 GitHub Pages。日报覆盖截至 08:00 的前 24 小时；执行可能延迟，不能保证整点送达。公开采集历史保存在独立 `content-state` 分支，Mac 无须保持运行。发布前后核对当期内容；手机恢复前台会重新拉取并在手势结束后更新书架。GitHub自身停调仍不能靠同平台兜底保证送达。
+## 文档
 
-首次配置、更新、手机安装和故障排查见 [部署与安装](docs/DEPLOYMENT.md)。需要在仓库 Settings → Pages 选择 GitHub Actions。页面由 GitHub 提供 HTTPS，使用免费子域名。
+| 我想了解 | 去哪里看 |
+| --- | --- |
+| 如何安装、更新或定位漏更 | [部署与运行](docs/DEPLOYMENT.md) |
+| 数据从哪里来，日报如何分日、去重和入选 | [后端与内容规则](docs/BACKEND.md) |
+| 哪些来源启用、停用或已实际核验 | [来源清单与核验](docs/NEWS-SOURCES.md) |
+| 如何维护书架与转场性能 | [前端性能](docs/PERFORMANCE.md) |
 
-这套配置支持网页阅读、主屏幕安装与有限离线缓存。**系统 Web Push 尚未实现**，GitHub Pages 本身不是推送后台。手机真机与七天稳定运行仍需验收。
-
-## 内容质量
-
-TLDR 独立书架：北京时间 08:00 后按首页顺序扫描，跳过广告和往期已收录的 TLDR 链接或原文链接，向下补足最多 10 篇。新规则首次运行会重算当天旧版，当天后续重试仅补失败详情或旧版不完整摘录。展示英文原标题、发布方完整短摘录和 TLDR／原站两个入口，点击纸页进入应用内阅读页。不调用 DeepSeek、不翻译、不混入 News 排序。服务端保留 30 个采集批次，并单独保留已收录链接索引，阅读缓存保留 3 批；采集日不冒充新闻发布日期。定时任务需发布后才生效；系统 Web Push 未实现。
-
-21 个新闻／期刊来源，另有 GitHub Trending 工具发现入口。保留既有官方源，新增 The Decoder、Ars Technica AI、MIT Technology Review AI、TechCrunch AI、Simon Willison，以及 Nature Neuroscience／Machine Intelligence 的明确封面关联和公开 Abstract。月刊封面进入 Medicine，保留封面月份与论文原始日期，不冒充当天新论文。GitHub Trending 只发现候选，再核对公开仓库元数据，不安装或执行。
-
-Hacker News 直接连接超时，两个 Reddit RSS 连接重置，暂不启用。Hugging Face 本机连接超时，保留失败状态；arXiv q-bio.NC 已停止订阅。JAMA、Science、Lancet 返回403、NEJM访问失败，按用户要求停止接入这四刊。来源实测与边界见 [来源核验](docs/NEWS-SOURCES.md)。
-
-重大官方模型发布、管理层变动优先；News 日报最多 5 条，Medicine 不混入 News。Skills 和 Medicine 每日 1–2 条、每周最多 10 条，展示本周累计，候选不足不凑数。北京时间 08:00 业务日、周一开始计周；固定入选、重试补缺，同版本不跨周重复。TLDR 每日最多 10 条。只保留发布方短摘录，不将厂商能力主张当独立验证，也不把期刊封面等同于临床结论。新增来源已纳入本次同步，线上状态待验证。
-
-晚发现的内容回填原日期，不伪装成今日新闻。日期、去重、来源故障与导出规则见 [后端说明](docs/BACKEND.md)；本轮漏报调查和实测见 [新闻覆盖记录](docs/NEWS-COVERAGE.md)。来源数量不代表全网覆盖。
-
-## 数据边界
-
-- 仓库仅上传明确允许的应用、采集脚本、测试与运行文档。
-- `data/`、本地研究素材、REA、运行日志和凭据文件不上传。
-- Pages 只发布 `dist/` 中的界面和公开新闻／项目快照，不提供本地文件访问。
-- 收藏与偏好留在当前设备；清阅读缓存不删除收藏。重要收藏请导出。
-- 不设置远程控制、入站隧道或 Mac 自托管 runner。
-- 不上传摘要 API 接入、Worker 地址或凭据；本次未访问任何密钥文件。
-
-手机预览使用终端输出的局域网地址；多网卡时用 `PREVIEW_HOST` 指定 Mac 的 Wi-Fi IPv4。仅临时监听该地址，不使用隧道或远程控制。HTTP 预览只验收触控和视觉，PWA 安装、更新及离线须在 HTTPS 发布后复核。验收前不上传；确认后同步到本机 `inspiration/` 上传仓库（远程 `Zh-Med/inspiration`）。
-
-当前 v66 保留共享透明纸页纹理和手势；总览单行四个玻璃入口，支持减少透明度回退。书架任意内容纸页均可点击阅读，拖动不误开；详情保留阅读滚动。用户已确认手机测试通过并授权上传。材质生成方式、回退路径和资源预算见 [性能记录](docs/PERFORMANCE.md)。
+本地开发仓库另有 `docs/README.md` 文档导航、`docs/PLAN.md` 项目状态和 `docs/DESIGN.md` 界面规范。

@@ -34,6 +34,7 @@
 /tests/*
 !/tests/*.test.mjs
 /docs/*
+!/docs/demo.gif
 !/docs/DEPLOYMENT.md
 !/docs/BACKEND.md
 !/docs/NEWS-COVERAGE.md
