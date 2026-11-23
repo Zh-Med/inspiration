@@ -120,35 +120,49 @@ body{background:#050505}.app{max-width:760px}.masthead{border:0;position:relativ
 .collection-updated{font-family:Georgia,'Times New Roman',serif;font-size:14px;letter-spacing:.02em;line-height:1;font-variant-numeric:lining-nums tabular-nums}
 .collection-updated>span{font-size:inherit}
 @media(max-width:380px){.collection-updated{font-size:12px}}
-.calendar-shortcut{position:fixed;right:max(20px,env(safe-area-inset-right));bottom:calc(24px + env(safe-area-inset-bottom));z-index:60;display:grid;place-items:center;width:50px;height:50px;padding:0;border-radius:50%;isolation:isolate;color:#f4f0e6;background:linear-gradient(145deg,#ffffff14,#ffffff03 48%,#e7d8b90a);border:1px solid #fff7e52e;box-shadow:0 6px 18px #0003,inset 0 1px 1px #ffffff52,inset 0 -1px 1px #fff5dd18;backdrop-filter:blur(12px) saturate(125%);-webkit-backdrop-filter:blur(12px) saturate(125%);transition:background .18s,transform .18s var(--ease)}
-.calendar-shortcut::before{content:'';position:absolute;inset:2px;border-radius:inherit;pointer-events:none;background:linear-gradient(135deg,#ffffff24,transparent 35%,transparent 68%,#fff5df0f);z-index:-1}
-.calendar-shortcut svg{width:23px;height:23px;stroke-width:1.6;filter:drop-shadow(0 1px 2px #0005)}
-.calendar-shortcut:hover,.calendar-shortcut[aria-expanded=true]{background-color:#ffffff12;text-decoration:none}
-.calendar-shortcut:active{transform:scale(.94)}
-.calendar-shortcut:focus-visible{outline:2px solid #f1e2c3;outline-offset:4px}
-.news-calendar{position:fixed;inset:auto max(20px,env(safe-area-inset-right)) calc(86px + env(safe-area-inset-bottom)) auto;margin:0;width:min(284px,calc(100vw - 24px));max-height:calc(100dvh - 110px - env(safe-area-inset-bottom));overflow:auto;padding:8px 6px;color:#f4f0e6;background-color:#17181540;border:1px solid rgba(230,225,210,var(--edge-light,.2));border-radius:14px;box-shadow:0 14px 38px #0007,inset 0 1px 0 #fffef02b,inset 0 -1px 0 #d6ceba12;isolation:isolate;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#b3a68d60 transparent}
-.news-calendar::before{content:'';position:absolute;inset:0;z-index:-1;border-radius:inherit;pointer-events:none;background:radial-gradient(ellipse 480px 320px at var(--lamp-x,0px) var(--lamp-y,0px),#fff9de50,transparent 100%);opacity:var(--lamp-power,.25)}
-.news-calendar::after{content:'';position:absolute;inset:0;z-index:-1;border-radius:inherit;pointer-events:none;background:radial-gradient(ellipse 180px 110px at var(--reflection-x,0px) var(--reflection-y,0px),#fffced26,transparent 100%);opacity:var(--lamp-power,.25)}
+.calendar-shortcut{
+ position:fixed;right:max(20px,env(safe-area-inset-right));bottom:calc(24px + env(safe-area-inset-bottom));
+ z-index:60;display:grid;place-items:center;width:50px;height:50px;padding:0;border-radius:50%;
+ transition:transform 280ms cubic-bezier(.2,.85,.2,1),background-color 180ms ease;
+}
+.calendar-shortcut svg{width:23px;height:23px;stroke-width:1.65;filter:drop-shadow(0 1px 2px #0006)}
+.calendar-shortcut:active{transform:scale(.91, .95)}
+.calendar-shortcut:focus-visible{outline:2px solid #eef6ff;outline-offset:4px}
+.news-calendar{
+ position:fixed;inset:auto max(20px,env(safe-area-inset-right)) calc(86px + env(safe-area-inset-bottom)) auto;
+ margin:0;width:min(284px,calc(100vw - 24px));max-height:calc(100dvh - 110px - env(safe-area-inset-bottom));
+ overflow:auto;padding:10px;border-radius:24px;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#9ea9b744 transparent;
+ transform-origin:calc(100% - 25px) calc(100% + 35px);
+}
+.calendar-shortcut,.news-calendar{color:#f7f9fc;background:#1b1e22;border:1px solid #363b41}
+.calendar-shortcut{background:#282d33}
+.calendar-shortcut:hover,.calendar-shortcut[aria-expanded=true]{background:#383e45;text-decoration:none}
 .news-calendar[hidden]{display:none}
-.news-calendar:popover-open{animation:calendar-open .18s var(--ease)}
-@keyframes calendar-open{from{opacity:0;transform:translateY(8px) scale(.97)}to{opacity:1;transform:none}}
+@keyframes popover-open-in{from{opacity:0;transform:translateY(9px) scale(.94,.91)}to{opacity:1;transform:none}}
+.news-calendar:popover-open{animation:popover-open-in 280ms cubic-bezier(.18,.85,.22,1)}
+@supports (transition-behavior:allow-discrete) and (overlay:auto){
+ .news-calendar[popover]{opacity:0;transform:translateY(8px) scale(.94,.91);
+  transition:opacity 150ms,transform 210ms cubic-bezier(.2,.8,.2,1),display 210ms allow-discrete,overlay 210ms allow-discrete}
+ .news-calendar:popover-open{animation:none;opacity:1;transform:none}
+ @starting-style{.news-calendar:popover-open{opacity:0;transform:translateY(9px) scale(.94,.91)}}
+}
 .calendar-heading{display:flex;align-items:center;justify-content:space-between;gap:4px;min-height:40px}
 .calendar-heading h2{font-size:15px;font-weight:550;letter-spacing:-.3px;white-space:nowrap}
-.calendar-heading button{display:grid;place-items:center;min-width:40px;min-height:40px;border-radius:10px;color:#e4d4b4}
-.calendar-heading button:hover,.calendar-footer button:hover{background:#e2d2b319}
+.calendar-heading button{display:grid;place-items:center;min-width:40px;min-height:40px;border-radius:10px;color:#edf2f8}
+.calendar-heading button:hover,.calendar-footer button:hover{background:#e5f2ff19}
 .calendar-heading svg{width:20px;height:20px}
 .news-calendar table{width:100%;table-layout:fixed;border-collapse:collapse;margin-top:4px}
-.news-calendar th{height:24px;padding:0;color:#e5ddca;font-size:10px;font-weight:500}
+.news-calendar th{height:28px;padding:0;color:#d0d8e3;font-size:.75rem;font-weight:500}
 .news-calendar td{height:36px;padding:0;text-align:center}
-.calendar-day{position:relative;display:block;width:100%;height:36px;padding:0;border-radius:9px;font-family:Georgia,'Times New Roman',serif;font-size:16px;font-variant-numeric:tabular-nums;line-height:1;color:#f4f0e6}
-.calendar-day:hover{background:#d9c8a523}
-.calendar-day.is-today{box-shadow:inset 0 0 0 1px #cdbb9399}
-.news-calendar td[aria-selected=true] .calendar-day{background:#dfcfb1;color:#211c14;font-weight:600}
+.calendar-day{position:relative;display:block;width:100%;height:36px;padding:0;border-radius:9px;font-family:inherit;font-size:16px;font-variant-numeric:tabular-nums;line-height:1;color:#f2f6fb}
+.calendar-day:hover{background:#dae8f523}
+.calendar-day.is-today{box-shadow:inset 0 0 0 1px #dee9f599}
+.news-calendar td[aria-selected=true] .calendar-day{background:#ecf1f8;color:#181b21;font-weight:600}
 .calendar-day.has-news::after{content:'';position:absolute;bottom:5px;left:calc(50% - 1.5px);width:3px;height:3px;border-radius:50%;background:currentColor}
-.calendar-footer{display:flex;align-items:center;justify-content:space-between;min-height:40px;margin-top:4px;border-top:1px solid #cdbb9326;color:#e5ddca;font-size:11px}
+.calendar-footer{display:flex;align-items:center;justify-content:space-between;min-height:40px;margin-top:4px;border-top:1px solid #e0eaf826;color:#d0d8e3;font-size:11px}
 .calendar-footer>span{display:flex;align-items:center;gap:6px;padding-left:8px}
-.calendar-footer i{width:3px;height:3px;border-radius:50%;background:#cdbb93}
-.calendar-footer button{min-height:40px;min-width:60px;border-radius:10px;font-size:12px;color:#ecdbba}
+.calendar-footer i{width:3px;height:3px;border-radius:50%;background:#d9e4f2}
+.calendar-footer button{min-height:40px;min-width:60px;border-radius:10px;font-size:12px;color:#edf3fa}
 .news-date-label{position:absolute;right:0;top:-55px;color:#c7b99d;font:14px/1.6 Georgia,'Times New Roman',serif;letter-spacing:.02em;font-variant-numeric:tabular-nums}
 .news-empty{padding:95px 16px 40px;text-align:center;color:#d9cbae}
 .news-empty h1{font-size:27px;font-weight:550;margin:0 0 7px}
@@ -157,8 +171,6 @@ body{background:#050505}.app{max-width:760px}.masthead{border:0;position:relativ
 .news-empty button{min-height:44px;padding:8px 16px;border:1px solid #cdbb9345;border-radius:10px;font-size:13px}
 @media(max-width:540px){.news-date-label{top:-50px}}
 @media(max-width:360px){.news-calendar{right:8px;width:calc(100vw - 16px);padding:8px 4px}.calendar-heading,.calendar-footer{margin-inline:2px}}
-@media(prefers-reduced-transparency:reduce){.news-calendar{background:#26251f;backdrop-filter:none;-webkit-backdrop-filter:none}}
-@media(prefers-reduced-transparency:reduce){.calendar-shortcut{background:#24221d;backdrop-filter:none;-webkit-backdrop-filter:none}.calendar-shortcut::before{display:none}}
 @media(prefers-reduced-motion:reduce){.masthead .brand{animation:none}}
 
 /* Match each folder's surface to its paper shelf in either direction. */
@@ -175,12 +187,11 @@ body{background:#050505}.app{max-width:760px}.masthead{border:0;position:relativ
 #night-sky[hidden]{display:none}
 .app{position:relative;z-index:1}
 :root{--film-stops:#c7c2af28,#77756e19 55%,#a6a18f21;--film-filter:blur(28px) saturate(75%)}
-.collection-card,.news-calendar{background-image:linear-gradient(135deg,var(--film-stops));backdrop-filter:var(--film-filter);-webkit-backdrop-filter:var(--film-filter)}
+.collection-card{background-image:linear-gradient(135deg,var(--film-stops));backdrop-filter:var(--film-filter);-webkit-backdrop-filter:var(--film-filter)}
 /* Web approximation of liquid glass: transparent body, bright curved rim. */
 .collection-card{--film-stops:#f8f3dc18,#b7b5aa08 46%,#ded7c614;--film-filter:blur(12px) saturate(135%) brightness(1.08)}
 @media(prefers-reduced-transparency:reduce){.collection-card{background:#292820;backdrop-filter:none;-webkit-backdrop-filter:none}.collection-card::before,.collection-card::after{display:none}}
 @supports not (backdrop-filter:blur(1px)){.collection-card{background-color:#292820}}
-@media(prefers-reduced-transparency:reduce){.news-calendar{background-color:#26251f;backdrop-filter:none;-webkit-backdrop-filter:none}.news-calendar::before,.news-calendar::after{display:none}}
 
 .collection-card>h2,.collection-card>.collection-updated{position:relative;z-index:1}
 
@@ -225,19 +236,6 @@ body{background:#050505}.app{max-width:760px}.masthead{border:0;position:relativ
 .skill-article .news-summary .repo-description{margin-top:16px}
 
 .provider-shortcut{right:calc(max(20px,env(safe-area-inset-right)) + 62px)}
-.provider-panel{bottom:calc(86px + env(safe-area-inset-bottom));max-height:calc(100dvh - 110px - env(safe-area-inset-bottom));padding:12px 16px}
-.provider-panel .calendar-heading{margin-bottom:12px}
-.provider-panel label{display:block;font-size:13px;margin:14px 0 7px}
-.provider-panel input{display:block;width:100%;min-width:0;min-height:44px;padding:10px 11px;border:1px solid #d6c49b45;border-radius:9px;background:#0c0d0c85;color:#fff;font-size:16px;caret-color:#e6d9bd}
-.provider-panel input::placeholder{color:#d3ccbf}
-.provider-note,.provider-status{font-size:12px;line-height:1.7;margin:14px 0;color:#e5ddca}
-.provider-status{min-height:20px}
-.provider-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px}
-.provider-actions button{min-height:44px;padding:9px 12px;border-radius:9px;font-size:14px}
-.provider-actions [type=submit]{background:#dfcfb1;color:#211c14}
-.provider-actions [data-provider-remove]{margin-right:auto}
-.provider-panel button:disabled{opacity:.5;cursor:wait}
-
 /* Freeze ambient layers during navigation; keep geometry continuous. */
 .collection-transition .paper-breath::before,.collection-transition-active>.app .paper-breath::before{animation-play-state:paused}
 .collection-transition .paper-material,.collection-transition .paper.is-front .paper-material,.collection-transition .collection-card,.collection-transition .collection-transition-glass{backdrop-filter:none;-webkit-backdrop-filter:none}
@@ -276,3 +274,22 @@ html.navigation-locked{height:100%;overflow:hidden;overscroll-behavior:none}
 body.deck-view,body.collections-view{position:fixed;inset:0;width:100%;height:100%;overflow:hidden;overscroll-behavior:none}
 .deck-view .deck-page{min-height:0}
 .news-calendar,dialog{overscroll-behavior:contain;touch-action:pan-y pinch-zoom}
+
+.provider-panel{
+ width:min(26rem,calc(100vw - 32px));padding:10px clamp(14px,4vw,22px) 20px;
+ max-height:calc(100dvh - 116px - env(safe-area-inset-bottom) - env(safe-area-inset-top));overflow-wrap:anywhere;
+ transform-origin:calc(100% - 87px) calc(100% + 35px);
+}
+.provider-panel .calendar-heading{margin:0 0 10px}
+#provider-title{font-size:1.3rem;line-height:1.35;letter-spacing:-.035em;font-weight:600;margin:0}
+.provider-panel .calendar-heading button{min-width:44px;min-height:44px;margin-right:-10px}
+#reading-result p{font-size:1.0625rem;line-height:1.72;margin:0;color:#f4f7fa}
+#reading-result p+p{margin-top:1em}
+.reading-large #reading-result p{font-size:1.2rem}
+.provider-status{display:block;font-size:.8125rem;line-height:1.55;margin:14px 0 0;color:#c3ccd6}
+.provider-status:empty{display:none}
+#reading-result details{margin-top:4px}
+#reading-result summary{padding:10px 0;font-size:.8rem;color:#cbd6e0;cursor:pointer}
+#reading-result details p{font-size:.9rem}
+@media(prefers-contrast:more){.calendar-shortcut,.news-calendar{border-color:#a8afb8}}
+@media(prefers-reduced-motion:reduce){.calendar-shortcut:active{transform:none}}

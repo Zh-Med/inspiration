@@ -4,7 +4,7 @@
   "version": "0.3.0",
   "scripts": {
     "start": "node scripts/serve.mjs",
-    "check": "node --check app/provider-settings.js && node --check app/content.js && node --check app/news-dates.js && node --check app/calendar.js && node --check app/app.js && node --check app/collection-motion.js && node --check app/scene.js && node --check app/sw.js && node --check scripts/serve.mjs && node scripts/check-server.mjs",
+    "check": "node --check app/provider-settings.js && node --check app/summary-client.js && node --check app/content.js && node --check app/news-dates.js && node --check app/calendar.js && node --check app/app.js && node --check app/collection-motion.js && node --check app/scene.js && node --check app/sw.js && node --check scripts/serve.mjs && node scripts/check-server.mjs",
     "collect": "node scripts/collect.mjs",
     "worker": "node scripts/worker.mjs",
     "test": "node --test tests/*.test.mjs",

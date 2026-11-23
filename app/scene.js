@@ -18,7 +18,7 @@
  spill.addColorStop(0,'rgba(180,175,154,.035)');spill.addColorStop(1,'rgba(180,175,154,0)');spillContext.fillStyle=spill;spillContext.fillRect(0,0,128,128);
  let seed=7241;const random=()=>{seed=(seed*16807)%2147483647;return (seed-1)/2147483646};
  function measure(){
-  panels=[...document.querySelectorAll('body > .app .collection-card, #news-calendar, #provider-panel')].map(el=>({el,rect:el.getBoundingClientRect()})).filter(p=>p.rect.width>0);
+  panels=[...document.querySelectorAll('body > .app .collection-card')].map(el=>({el,rect:el.getBoundingClientRect()})).filter(p=>p.rect.width>0);
  }
  function resize(){
   width=innerWidth;height=innerHeight;const dpr=Math.min(devicePixelRatio||1,1.5,Math.sqrt(1_500_000/Math.max(1,width*height)));stats.pixelRatio=dpr;
@@ -78,9 +78,8 @@
   }
  }
  const skyVisible=()=>document.body.classList.contains('news-reading')||document.body.classList.contains('collections-view')||document.body.classList.contains('collection-transition-active');
- const visible=()=>skyVisible()||!!window.NewsCalendar?.isOpen()||!!window.ProviderSettings?.isOpen();
  const transitioning=()=>document.body.classList.contains('collection-transition-active');
- const active=()=>!document.hidden&&!inactive&&visible()&&!motion.matches&&!transitioning();
+ const active=()=>!document.hidden&&!inactive&&skyVisible()&&!motion.matches&&!transitioning();
  const interval=()=>1000/(document.body.classList.contains('news-reading')?18:24);
  function cancel(){cancelAnimationFrame(frame);clearTimeout(timer);frame=0;timer=0}
  function schedule(){timer=setTimeout(()=>{timer=0;frame=requestAnimationFrame(tick)},interval())}
@@ -92,13 +91,12 @@
  function sync(){
   cancel();last=0;measure();
   canvas.hidden=!skyVisible();canvas.dataset.running='false';
-  if(!document.hidden&&visible())draw(true);
+  if(!document.hidden&&skyVisible())draw(true);
   if(active()){last=performance.now();schedule()}
  }
  new MutationObserver(sync).observe(document.body,{attributes:true,attributeFilter:['class']});
  new MutationObserver(sync).observe(document.querySelector('#main'),{childList:true,subtree:true});
  document.addEventListener('collectionsceneupdate',sync);
- document.addEventListener('calendar-surface-change',sync);
  addEventListener('resize',resize);addEventListener('scroll',measure,{passive:true});
  addEventListener('blur',()=>{inactive=true;document.documentElement.classList.add('window-inactive');sync()});
  addEventListener('focus',()=>{inactive=false;document.documentElement.classList.remove('window-inactive');sync()});

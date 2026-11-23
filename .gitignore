@@ -55,10 +55,8 @@
 **/__pycache__/
 **/.DS_Store
 
-# Unfinished summary API work stays local.
+# Worker deployment files and local integration notes.
 /cloudflare/
-/app/summary-client.js
-/tests/summary-client.test.mjs
 /docs/DEEPSEEK.md
 
 !/scripts/verify-publication.mjs

@@ -225,12 +225,18 @@ function readmeSummary(excerpt){
  const summary=text.split(/(?<=[.!?])\s+(?=[A-Z])/).slice(0,3).join(' ').trim();
  return summary.length>650?summary.slice(0,647).trimEnd()+'…':summary;
 }
+function currentReadingItem(){
+ const route=location.hash.slice(1)||'today';
+ const [kind,id]=route.split('/');
+ if(kind==='story'||kind==='tool')return (kind==='tool'?tools:stories).find(item=>item.id===id);
+ if(shelfKindForRoute(route))return shelfContent[Math.round(deckProgress)];
+}
 function detail(id,isTool){
  const t=(isTool?tools:stories).find(x=>x.id===id);
  if(!t)return intro('这条内容尚未载入。','联网后可重新打开；离线时仅保留已缓存与收藏的内容。')+'<a class="primary" href="#today">返回今日</a>';
  if(!reading.includes(id)){reading.push(id);save('reading',reading)}
  if(t.collection==='tldr')return `<article class="article news-article" lang="en"><h1>${esc(t.title)}</h1><div class="news-byline"><span class="news-source">${safeLink(t.url,'TLDR',false)}</span><time datetime="${esc(t.collectedAt)}">Collected ${esc(t.selectionDate)}</time></div><section class="news-summary" aria-label="Original excerpt"><h2>Original excerpt</h2><p>${esc(t.summary||'Open TLDR to read this story.')}${t.excerptTruncated&&t.summary?'…':''}</p><p>${safeLink(t.url,'Read on TLDR')} · ${safeLink(t.originalUrl,'Original article')}</p></section></article>`;
- if(!isTool)return `<article class="article news-article"><h1>${esc(t.title)}</h1><div class="news-byline"><span class="news-source">${safeLink(t.url,t.source,false)||esc(t.source)}</span><time datetime="${esc((t.coverConfirmed?t.articlePublishedAt:t.publishedAt)||'')}">${t.coverConfirmed?'论文发表于 ':''}${esc(newsDateText(t.coverConfirmed?t.articlePublishedAt:t.publishedAt))}</time>${t.coverConfirmed?`<span>${safeLink(t.coverEvidenceUrl,'封面 · '+(t.issueMonth||newsDateText(t.issuePublishedAt)),false)}</span>`:''}</div><section class="news-summary" aria-label="摘要"><h2>来源摘录</h2><p>${esc(t.summary||'来源暂未提供摘要。')}</p></section></article>`;
+ if(!isTool)return `<article class="article news-article"><h1>${esc(t.title)}</h1><div class="news-byline"><span class="news-source">${safeLink(t.url,t.source,false)||esc(t.source)}</span><time datetime="${esc((t.coverConfirmed?t.articlePublishedAt:t.publishedAt)||'')}">${t.coverConfirmed?'论文发表于 ':''}${esc(newsDateText(t.coverConfirmed?t.articlePublishedAt:t.publishedAt))}</time>${t.coverConfirmed?`<span>${safeLink(t.coverEvidenceUrl,'封面 · '+(t.issueMonth||newsDateText(t.issuePublishedAt)),false)}</span>`:''}</div><section class="news-summary" aria-label="摘要"><h2>${t.generatedSummary?'AI 摘要 · 基于来源摘录':'来源摘录'}</h2><p>${esc(t.generatedSummary?.text||t.summary||'来源暂未提供摘要。')}</p>${t.generatedSummary?`<h2>来源摘录</h2><p>${esc(t.summary||t.body||'')}</p>`:''}</section></article>`;
  const repo=t.fullName||t.name||t.english;
  const title=t.title||repo.split('/').pop();
  const updated=t.pushedAt||t.publishedAt;

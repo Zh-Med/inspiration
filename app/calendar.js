@@ -4,7 +4,7 @@
  let config={today:()=>NewsDates.today(),selected:()=>NewsDates.today(),available:()=>[]},view='',focusDate='';
  const opened=()=>native?panel.matches(':popover-open'):!panel.hidden;
  if(!native)panel.hidden=true;
- function close(focus=false){if(opened()){if(native)panel.hidePopover();else panel.hidden=true}document.dispatchEvent(new Event('calendar-surface-change'));trigger.setAttribute('aria-expanded','false');if(focus)trigger.focus({preventScroll:true})}
+ function close(focus=false){if(opened()){if(native)panel.hidePopover();else panel.hidden=true}trigger.setAttribute('aria-expanded','false');if(focus)trigger.focus({preventScroll:true})}
  function render(){
   const date=NewsDates.parse(view),year=date.getUTCFullYear(),month=date.getUTCMonth(),first=new Date(Date.UTC(year,month,1,12)),start=(first.getUTCDay()+6)%7;
   const count=new Date(Date.UTC(year,month+1,0)).getUTCDate(),selected=config.selected(),today=config.today(),available=new Set(config.available());
@@ -14,11 +14,10 @@
  }
  function prepare(){document.dispatchEvent(new Event('news-calendar-open'));const key=NewsDates.parse(config.selected())?config.selected():config.today();view=key.slice(0,7)+'-01';focusDate=key;render();trigger.setAttribute('aria-expanded','true')}
  function focusDay(){panel.querySelector(`[data-news-date="${focusDate}"]`)?.focus({preventScroll:false})}
- function open(){if(opened()){close(true);return}if(native)panel.showPopover();else{prepare();panel.hidden=false;document.dispatchEvent(new Event('calendar-surface-change'));requestAnimationFrame(focusDay)}}
+ function open(){if(opened()){close(true);return}if(native)panel.showPopover();else{prepare();panel.hidden=false;requestAnimationFrame(focusDay)}}
  function choose(key){if(!NewsDates.parse(key))return;close(false);document.dispatchEvent(new CustomEvent('news-date-selected',{detail:{date:key}}))}
  panel.addEventListener('beforetoggle',e=>{if(e.newState==='open')prepare()});
- panel.addEventListener('animationend',()=>document.dispatchEvent(new Event('calendar-surface-change')));
- panel.addEventListener('toggle',e=>{document.dispatchEvent(new Event('calendar-surface-change'));trigger.setAttribute('aria-expanded',String(e.newState==='open'));if(e.newState==='open')requestAnimationFrame(()=>{if(opened())focusDay()})});
+ panel.addEventListener('toggle',e=>{trigger.setAttribute('aria-expanded',String(e.newState==='open'));if(e.newState==='open')requestAnimationFrame(()=>{if(opened())focusDay()})});
  trigger.addEventListener('click',e=>{e.preventDefault();open()});
  document.addEventListener('click',e=>{if(e.target.closest('[data-calendar-open]'))open()});
  document.addEventListener('pointerdown',e=>{if(!native&&opened()&&!panel.contains(e.target)&&!trigger.contains(e.target))close(false)},true);

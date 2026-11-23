@@ -16,3 +16,17 @@ test('phone preview serves only static build files and rejects mutations, other 
   assert.equal((await fetch(url,{headers:{Origin:'http://attacker.example'}})).status,403);
  }finally{server.closeAllConnections();await new Promise(r=>server.close(r));await rm(dir,{recursive:true,force:true})}
 });
+test('LAN reads through fixed public API and preserves the live excerpt alongside preview analysis',async()=>{
+ const paths=[],id='event-'+'f'.repeat(24);
+ const getSummary=async path=>{paths.push(path);return {schemaVersion:1,items:[{id,schemaVersion:1}]}};
+ const server=createPhonePreview({getSummary,examples:[{id,schemaVersion:2}]});
+ await new Promise(r=>server.listen(0,'127.0.0.1',r));
+ const base='http://127.0.0.1:'+server.address().port;
+ try{
+  const data=await (await fetch(base+'/reading-api/summaries')).json();
+  assert.deepEqual(data.items.map(i=>i.schemaVersion),[2,1]);
+  await fetch(base+'/reading-api/summaries');assert.deepEqual(paths,['/summaries']);
+  assert.equal((await fetch(base+'/reading-api/summaries?id=bad')).status,400);
+  await fetch(base+'/reading-api/summaries?id='+id);assert.equal(paths.at(-1),'/summaries?id='+id);
+ }finally{server.closeAllConnections();await new Promise(r=>server.close(r))}
+});
