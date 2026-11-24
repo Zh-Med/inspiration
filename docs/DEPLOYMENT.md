@@ -27,7 +27,7 @@
 ## 自动更新与运行
 
 - UTC `17,47 * * * *`：每小时第17、47分钟尝试更新；当天尚未完成完整采集时自动补跑晨报与科研项目，否则只采新闻。
-- UTC `7 0 * * *`：北京时间08:07晨报入口；日报覆盖 `[前一天08:00, 当天08:00)`。判断依据是实际运行时的北京时间业务日，不依赖恰好收到这条cron。
+- UTC `3 0 * * *` 是北京时间 08:03 的 GitHub 晨报入口。日报覆盖 `[前一天08:00, 当天08:00)`，以实际采集时间确定业务日。
 - push 到 main 或手动触发：完整采集并发布。记录最近完整采集业务日，避免运行历史轮换后反复执行科研项目采集。
 - 构建后检查当前业务日的News覆盖区间、来源可用性和TLDR批次；缺期时失败，不将旧内容当成更新成功。无新闻时允许明确的空日报。发布后再次读取线上内容与独立日报，核对本次采集时间和指纹。
 - 手机恢复前台、返回缓存页面和重新聚焦时重新拉取，30秒内合并重复事件；前台持续打开每5分钟检查。离线保留原缓存与收藏。恢复时的新书架等拖动／转场结束后更新，阅读中的文章等离开后应用新数据。
@@ -37,6 +37,14 @@
 - 收藏保存在当前站点与设备。改变域名／仓库路径可能导致原收藏不可见，迁移前先导出。
 
 GitHub 官方说明：定时任务可能延迟或丢弃，公开仓库60天无活动可能停用定时任务。因此此方案不承诺08:00准点或重大消息即时通知。定期查看 Actions；启用后需做连续七天运行检查。[定时任务限制](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule)
+
+### Cloudflare 独立补发
+
+使用独立 Worker 部署 [tldr-scheduler.mjs](../scripts/tldr-scheduler.mjs)，在 Cloudflare 后台添加一条 UTC Cron Trigger `0,9,21,36,51 0 * * *`。对应北京时间 08:00、08:09、08:21、08:36、08:51。08:00 开始检查和采集，正文要等工作流完成后才会出现在 Pages。
+
+在 GitHub 创建只授权 `Zh-Med/inspiration` 的 fine-grained token，授予仓库级 Actions 读写权限。在独立 Worker 后台将值存为 Secret `GITHUB_DISPATCH_TOKEN`。当前摘要 Worker 无需改动。记录 token 的到期日，并在到期前轮换。
+
+当天 TLDR 达到 `ready` 后停止补发。已有 15 分钟内启动、尚未结束的工作流时，留到下一次检查。其余情况下，通过 `workflow_dispatch` 启动现有工作流。Worker 日志只记录结果或 HTTP 状态，验收时对照 Actions 与 Pages 的 `build-info.json` 中的 `tldrDate`、`tldrStatus`。Cloudflare 可补 GitHub 定时触发的缺口，采集、部署和线上校验仍由 GitHub Actions 执行。
 
 ## 排错
 

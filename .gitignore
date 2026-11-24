@@ -60,3 +60,4 @@
 /docs/DEEPSEEK.md
 
 !/scripts/verify-publication.mjs
+!/scripts/tldr-scheduler.mjs

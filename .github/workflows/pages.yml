@@ -6,7 +6,7 @@ on:
   schedule:
     # UTC: morning run plus two recovery opportunities per hour.
     - cron: '17,47 * * * *'
-    - cron: '7 0 * * *'
+    - cron: '3 0 * * *'
 permissions:
   contents: read
 concurrency:

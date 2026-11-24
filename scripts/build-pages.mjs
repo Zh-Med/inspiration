@@ -26,7 +26,8 @@ export async function buildPages({dir=dataDir,out=resolve('dist')}={}){
  const hash=createHash('sha256');for(const name of assets)hash.update(await readFile(join(root,name)));
  const sw=await readFile(join(root,'sw.js'),'utf8');await writeFile(join(root,'sw.js'),sw.replace(/PREFIX\+'v\d+'/,`PREFIX+'${hash.digest('hex').slice(0,16)}'`));
  await writeFile(join(root,'.nojekyll'),'');
- const report={builtAt:new Date().toISOString(),contentUpdatedAt:state.updatedAt,stories:view.stories.length,tools:view.tools.length,tldrItems:Object.values(view.tldrIssues||{}).at(-1)?.items.length||0,issues:Object.keys(view.digests).length,status:view.status,summaryServiceConfigured:true,summaryServiceVerified:false};
+ const tldr=Object.values(view.tldrIssues||{}).at(-1);
+ const report={builtAt:new Date().toISOString(),contentUpdatedAt:state.updatedAt,stories:view.stories.length,tools:view.tools.length,tldrDate:tldr?.date??null,tldrStatus:tldr?.status??null,tldrItems:tldr?.items.length??0,issues:Object.keys(view.digests).length,status:view.status,summaryServiceConfigured:true,summaryServiceVerified:false};
  await writeFile(join(root,'build-info.json'),JSON.stringify(report,null,2)+'\n');return report;
 }
 if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){try{console.log(JSON.stringify(await buildPages(),null,2))}catch(e){console.error(e.message);process.exitCode=1}}
